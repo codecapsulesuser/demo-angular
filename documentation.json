@@ -1,0 +1,3467 @@
+{
+    "pipes": [],
+    "interfaces": [
+        {
+            "name": "AuthResponseData",
+            "id": "interface-AuthResponseData-a58111c176495d5d4cd60aa240eb5ca6",
+            "file": "src/app/auth/auth.service.ts",
+            "type": "interface",
+            "sourceCode": "import { Injectable } from '@angular/core';\nimport { HttpClient, HttpErrorResponse } from '@angular/common/http';\nimport { catchError, tap } from 'rxjs/operators';\nimport { throwError, BehaviorSubject } from 'rxjs';\nimport { User } from './user.model';\nimport { Router } from '@angular/router';\n\nexport interface AuthResponseData {\n  kind: string;\n  idToken: string;\n  email: string;\n  refreshToken: string;\n  expiresIn: string;\n  localId: string;\n  registered?: boolean;\n}\n\n@Injectable({ providedIn: 'root' })\nexport class AuthService {\n  user = new BehaviorSubject<User>(null);\n  private tokenExpirationTimer: any;\n\n  constructor(private http: HttpClient, private router: Router) {}\n\n  signUp(email: string, password: string) {\n    return this.http\n      .post<AuthResponseData>(\n        'https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=AIzaSyBGGTbOnH_L5YJRx8g8eKGf-RXqsk-gHQA',\n        {\n          email: email,\n          password: password,\n          returnSecureToken: true,\n        }\n      )\n      .pipe(\n        catchError(this.handleError),\n        tap((resData) => {\n          this.handleAuthentication(\n            resData.email,\n            resData.localId,\n            resData.idToken,\n            +resData.expiresIn\n          );\n        })\n      );\n  }\n\n  login(email: string, password: string) {\n    return this.http\n      .post<AuthResponseData>(\n        'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyBGGTbOnH_L5YJRx8g8eKGf-RXqsk-gHQA',\n        {\n          email: email,\n          password: password,\n          returnSecureToken: true,\n        }\n      )\n      .pipe(\n        catchError(this.handleError),\n        tap((resData) => {\n          this.handleAuthentication(\n            resData.email,\n            resData.localId,\n            resData.idToken,\n            +resData.expiresIn\n          );\n        })\n      );\n  }\n\n  autoLogin() {\n    const userData: {\n      email: string;\n      id: string;\n      _token: string;\n      _tokenExpirationDate: string;\n    } = JSON.parse(localStorage.getItem('userData'));\n    if (!userData) {\n      return;\n    }\n    const loadedUser = new User(\n      userData.email,\n      userData.id,\n      userData._token,\n      new Date(userData._tokenExpirationDate)\n    );\n\n    if (loadedUser.token) {\n      this.user.next(loadedUser);\n      const expirationDuration = new Date(userData._tokenExpirationDate).getTime() - new Date().getTime();\n      this.autoLogout(expirationDuration);\n    }\n  }\n\n  logout() {\n    this.user.next(null);\n    this.router.navigate(['/auth']);\n    localStorage.removeItem('userData');\n    if(this.tokenExpirationTimer){\n      clearTimeout(this.tokenExpirationTimer);\n    }\n    this.tokenExpirationTimer = null;\n  }\n\n  autoLogout(expirationDuration: number) {\n    console.log(expirationDuration);\n    this.tokenExpirationTimer = setTimeout(() => {\n      this.logout();\n    }, expirationDuration);\n  }\n\n  private handleAuthentication(\n    email: string,\n    userId: string,\n    token: string,\n    expiresIn: number\n  ) {\n    const expirationDate = new Date(new Date().getTime() + expiresIn * 1000);\n    const user = new User(email, userId, token, expirationDate);\n    this.user.next(user);\n    this.autoLogout(expiresIn * 1000);\n    localStorage.setItem('userData', JSON.stringify(user));\n  }\n\n  private handleError(errorRes: HttpErrorResponse) {\n    let errorMessage = 'An unknown error occured';\n    if (!errorRes.error || !errorRes.error.error) {\n      return throwError(errorMessage);\n    }\n    switch (errorRes.error.error.message) {\n      case 'EMAIL_EXISTS':\n        errorMessage = 'This email exists already';\n        break;\n      case 'EMAIL_NOT_FOUND':\n        errorMessage = 'This email does not exist';\n        break;\n      case 'INVALID_PASSWORD':\n        errorMessage = 'This password is not correct';\n        break;\n    }\n    return throwError(errorMessage);\n  }\n}\n",
+            "properties": [
+                {
+                    "name": "email",
+                    "type": "string",
+                    "optional": false,
+                    "description": "",
+                    "line": 11
+                },
+                {
+                    "name": "expiresIn",
+                    "type": "string",
+                    "optional": false,
+                    "description": "",
+                    "line": 13
+                },
+                {
+                    "name": "idToken",
+                    "type": "string",
+                    "optional": false,
+                    "description": "",
+                    "line": 10
+                },
+                {
+                    "name": "kind",
+                    "type": "string",
+                    "optional": false,
+                    "description": "",
+                    "line": 9
+                },
+                {
+                    "name": "localId",
+                    "type": "string",
+                    "optional": false,
+                    "description": "",
+                    "line": 14
+                },
+                {
+                    "name": "refreshToken",
+                    "type": "string",
+                    "optional": false,
+                    "description": "",
+                    "line": 12
+                },
+                {
+                    "name": "registered",
+                    "type": "boolean",
+                    "optional": true,
+                    "description": "",
+                    "line": 15
+                }
+            ],
+            "indexSignatures": [],
+            "kind": 150,
+            "methods": []
+        }
+    ],
+    "injectables": [
+        {
+            "name": "AuthService",
+            "id": "injectable-AuthService-a58111c176495d5d4cd60aa240eb5ca6",
+            "file": "src/app/auth/auth.service.ts",
+            "properties": [
+                {
+                    "name": "tokenExpirationTimer",
+                    "type": "any",
+                    "optional": false,
+                    "description": "",
+                    "line": 21,
+                    "modifierKind": [
+                        112
+                    ]
+                },
+                {
+                    "name": "user",
+                    "defaultValue": "new BehaviorSubject<User>(null)",
+                    "type": "",
+                    "optional": false,
+                    "description": "",
+                    "line": 20
+                }
+            ],
+            "methods": [
+                {
+                    "name": "autoLogin",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 71
+                },
+                {
+                    "name": "autoLogout",
+                    "args": [
+                        {
+                            "name": "expirationDuration",
+                            "type": "number"
+                        }
+                    ],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 105,
+                    "jsdoctags": [
+                        {
+                            "name": "expirationDuration",
+                            "type": "number",
+                            "tagName": {
+                                "text": "param"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "handleAuthentication",
+                    "args": [
+                        {
+                            "name": "email",
+                            "type": "string"
+                        },
+                        {
+                            "name": "userId",
+                            "type": "string"
+                        },
+                        {
+                            "name": "token",
+                            "type": "string"
+                        },
+                        {
+                            "name": "expiresIn",
+                            "type": "number"
+                        }
+                    ],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 112,
+                    "modifierKind": [
+                        112
+                    ],
+                    "jsdoctags": [
+                        {
+                            "name": "email",
+                            "type": "string",
+                            "tagName": {
+                                "text": "param"
+                            }
+                        },
+                        {
+                            "name": "userId",
+                            "type": "string",
+                            "tagName": {
+                                "text": "param"
+                            }
+                        },
+                        {
+                            "name": "token",
+                            "type": "string",
+                            "tagName": {
+                                "text": "param"
+                            }
+                        },
+                        {
+                            "name": "expiresIn",
+                            "type": "number",
+                            "tagName": {
+                                "text": "param"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "handleError",
+                    "args": [
+                        {
+                            "name": "errorRes",
+                            "type": "HttpErrorResponse"
+                        }
+                    ],
+                    "optional": false,
+                    "returnType": "any",
+                    "typeParameters": [],
+                    "line": 125,
+                    "modifierKind": [
+                        112
+                    ],
+                    "jsdoctags": [
+                        {
+                            "name": "errorRes",
+                            "type": "HttpErrorResponse",
+                            "tagName": {
+                                "text": "param"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "login",
+                    "args": [
+                        {
+                            "name": "email",
+                            "type": "string"
+                        },
+                        {
+                            "name": "password",
+                            "type": "string"
+                        }
+                    ],
+                    "optional": false,
+                    "returnType": "any",
+                    "typeParameters": [],
+                    "line": 48,
+                    "jsdoctags": [
+                        {
+                            "name": "email",
+                            "type": "string",
+                            "tagName": {
+                                "text": "param"
+                            }
+                        },
+                        {
+                            "name": "password",
+                            "type": "string",
+                            "tagName": {
+                                "text": "param"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "logout",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 95
+                },
+                {
+                    "name": "signUp",
+                    "args": [
+                        {
+                            "name": "email",
+                            "type": "string"
+                        },
+                        {
+                            "name": "password",
+                            "type": "string"
+                        }
+                    ],
+                    "optional": false,
+                    "returnType": "any",
+                    "typeParameters": [],
+                    "line": 25,
+                    "jsdoctags": [
+                        {
+                            "name": "email",
+                            "type": "string",
+                            "tagName": {
+                                "text": "param"
+                            }
+                        },
+                        {
+                            "name": "password",
+                            "type": "string",
+                            "tagName": {
+                                "text": "param"
+                            }
+                        }
+                    ]
+                }
+            ],
+            "description": "",
+            "sourceCode": "import { Injectable } from '@angular/core';\nimport { HttpClient, HttpErrorResponse } from '@angular/common/http';\nimport { catchError, tap } from 'rxjs/operators';\nimport { throwError, BehaviorSubject } from 'rxjs';\nimport { User } from './user.model';\nimport { Router } from '@angular/router';\n\nexport interface AuthResponseData {\n  kind: string;\n  idToken: string;\n  email: string;\n  refreshToken: string;\n  expiresIn: string;\n  localId: string;\n  registered?: boolean;\n}\n\n@Injectable({ providedIn: 'root' })\nexport class AuthService {\n  user = new BehaviorSubject<User>(null);\n  private tokenExpirationTimer: any;\n\n  constructor(private http: HttpClient, private router: Router) {}\n\n  signUp(email: string, password: string) {\n    return this.http\n      .post<AuthResponseData>(\n        'https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=AIzaSyBGGTbOnH_L5YJRx8g8eKGf-RXqsk-gHQA',\n        {\n          email: email,\n          password: password,\n          returnSecureToken: true,\n        }\n      )\n      .pipe(\n        catchError(this.handleError),\n        tap((resData) => {\n          this.handleAuthentication(\n            resData.email,\n            resData.localId,\n            resData.idToken,\n            +resData.expiresIn\n          );\n        })\n      );\n  }\n\n  login(email: string, password: string) {\n    return this.http\n      .post<AuthResponseData>(\n        'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyBGGTbOnH_L5YJRx8g8eKGf-RXqsk-gHQA',\n        {\n          email: email,\n          password: password,\n          returnSecureToken: true,\n        }\n      )\n      .pipe(\n        catchError(this.handleError),\n        tap((resData) => {\n          this.handleAuthentication(\n            resData.email,\n            resData.localId,\n            resData.idToken,\n            +resData.expiresIn\n          );\n        })\n      );\n  }\n\n  autoLogin() {\n    const userData: {\n      email: string;\n      id: string;\n      _token: string;\n      _tokenExpirationDate: string;\n    } = JSON.parse(localStorage.getItem('userData'));\n    if (!userData) {\n      return;\n    }\n    const loadedUser = new User(\n      userData.email,\n      userData.id,\n      userData._token,\n      new Date(userData._tokenExpirationDate)\n    );\n\n    if (loadedUser.token) {\n      this.user.next(loadedUser);\n      const expirationDuration = new Date(userData._tokenExpirationDate).getTime() - new Date().getTime();\n      this.autoLogout(expirationDuration);\n    }\n  }\n\n  logout() {\n    this.user.next(null);\n    this.router.navigate(['/auth']);\n    localStorage.removeItem('userData');\n    if(this.tokenExpirationTimer){\n      clearTimeout(this.tokenExpirationTimer);\n    }\n    this.tokenExpirationTimer = null;\n  }\n\n  autoLogout(expirationDuration: number) {\n    console.log(expirationDuration);\n    this.tokenExpirationTimer = setTimeout(() => {\n      this.logout();\n    }, expirationDuration);\n  }\n\n  private handleAuthentication(\n    email: string,\n    userId: string,\n    token: string,\n    expiresIn: number\n  ) {\n    const expirationDate = new Date(new Date().getTime() + expiresIn * 1000);\n    const user = new User(email, userId, token, expirationDate);\n    this.user.next(user);\n    this.autoLogout(expiresIn * 1000);\n    localStorage.setItem('userData', JSON.stringify(user));\n  }\n\n  private handleError(errorRes: HttpErrorResponse) {\n    let errorMessage = 'An unknown error occured';\n    if (!errorRes.error || !errorRes.error.error) {\n      return throwError(errorMessage);\n    }\n    switch (errorRes.error.error.message) {\n      case 'EMAIL_EXISTS':\n        errorMessage = 'This email exists already';\n        break;\n      case 'EMAIL_NOT_FOUND':\n        errorMessage = 'This email does not exist';\n        break;\n      case 'INVALID_PASSWORD':\n        errorMessage = 'This password is not correct';\n        break;\n    }\n    return throwError(errorMessage);\n  }\n}\n",
+            "constructorObj": {
+                "name": "constructor",
+                "description": "",
+                "args": [
+                    {
+                        "name": "http",
+                        "type": "HttpClient"
+                    },
+                    {
+                        "name": "router",
+                        "type": "Router"
+                    }
+                ],
+                "line": 21,
+                "jsdoctags": [
+                    {
+                        "name": "http",
+                        "type": "HttpClient",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    },
+                    {
+                        "name": "router",
+                        "type": "Router",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    }
+                ]
+            },
+            "type": "injectable"
+        },
+        {
+            "name": "DataStorageService",
+            "id": "injectable-DataStorageService-cabc65993ff7a8ab24941d8b5a766e55",
+            "file": "src/app/shared/data-storage.service.ts",
+            "properties": [],
+            "methods": [
+                {
+                    "name": "fetchRecipes",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "any",
+                    "typeParameters": [],
+                    "line": 26
+                },
+                {
+                    "name": "storeRecipes",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 17
+                }
+            ],
+            "description": "",
+            "sourceCode": "import { Injectable } from '@angular/core';\nimport { HttpClient, HttpParams } from '@angular/common/http';\nimport { map, tap, take, exhaustMap } from 'rxjs/operators';\n\nimport { RecipeService } from '../recipes/recipe.service';\nimport { Recipe } from '../recipes/recipe.model';\nimport { AuthService } from '../auth/auth.service';\n\n@Injectable({ providedIn: 'root' })\nexport class DataStorageService {\n  constructor(\n    private http: HttpClient,\n    private recipeService: RecipeService,\n    private authService: AuthService\n  ) {}\n\n  storeRecipes() {\n    const recipes = this.recipeService.getRecipes();\n    this.http\n      .put('https://shopping-recipe-e2cdb.firebaseio.com/recipes.json', recipes)\n      .subscribe((response) => {\n        console.log(response);\n      });\n  }\n\n  fetchRecipes() {\n    return this.http\n      .get<Recipe[]>(\n        'https://shopping-recipe-e2cdb.firebaseio.com/recipes.json'\n      )\n      .pipe(\n        map((recipes) => {\n          return recipes.map((recipe) => {\n            return {\n              ...recipe,\n              ingredients: recipe.ingredients ? recipe.ingredients : [],\n            };\n          });\n        }),\n        tap((recipes) => {\n          this.recipeService.setRecipes(recipes);\n        })\n      );\n  }\n}\n",
+            "constructorObj": {
+                "name": "constructor",
+                "description": "",
+                "args": [
+                    {
+                        "name": "http",
+                        "type": "HttpClient"
+                    },
+                    {
+                        "name": "recipeService",
+                        "type": "RecipeService"
+                    },
+                    {
+                        "name": "authService",
+                        "type": "AuthService"
+                    }
+                ],
+                "line": 10,
+                "jsdoctags": [
+                    {
+                        "name": "http",
+                        "type": "HttpClient",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    },
+                    {
+                        "name": "recipeService",
+                        "type": "RecipeService",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    },
+                    {
+                        "name": "authService",
+                        "type": "AuthService",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    }
+                ]
+            },
+            "type": "injectable"
+        },
+        {
+            "name": "RecipeService",
+            "id": "injectable-RecipeService-42777df7791657773beebac374aad61f",
+            "file": "src/app/recipes/recipe.service.ts",
+            "properties": [
+                {
+                    "name": "recipes",
+                    "defaultValue": "[]",
+                    "type": "Recipe[]",
+                    "optional": false,
+                    "description": "",
+                    "line": 35,
+                    "modifierKind": [
+                        112
+                    ]
+                },
+                {
+                    "name": "recipesChanged",
+                    "defaultValue": "new Subject<Recipe[]>()",
+                    "type": "",
+                    "optional": false,
+                    "description": "",
+                    "line": 9
+                }
+            ],
+            "methods": [
+                {
+                    "name": "addIngredientsToShoppingList",
+                    "args": [
+                        {
+                            "name": "ingredients",
+                            "type": "Ingredient[]"
+                        }
+                    ],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 52,
+                    "jsdoctags": [
+                        {
+                            "name": "ingredients",
+                            "type": "Ingredient[]",
+                            "tagName": {
+                                "text": "param"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "addRecipe",
+                    "args": [
+                        {
+                            "name": "recipe",
+                            "type": "Recipe"
+                        }
+                    ],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 56,
+                    "jsdoctags": [
+                        {
+                            "name": "recipe",
+                            "type": "Recipe",
+                            "tagName": {
+                                "text": "param"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "deleteRecipe",
+                    "args": [
+                        {
+                            "name": "index",
+                            "type": "number"
+                        }
+                    ],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 66,
+                    "jsdoctags": [
+                        {
+                            "name": "index",
+                            "type": "number",
+                            "tagName": {
+                                "text": "param"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "getRecipe",
+                    "args": [
+                        {
+                            "name": "index",
+                            "type": "number"
+                        }
+                    ],
+                    "optional": false,
+                    "returnType": "any",
+                    "typeParameters": [],
+                    "line": 48,
+                    "jsdoctags": [
+                        {
+                            "name": "index",
+                            "type": "number",
+                            "tagName": {
+                                "text": "param"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "getRecipes",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "any",
+                    "typeParameters": [],
+                    "line": 44
+                },
+                {
+                    "name": "setRecipes",
+                    "args": [
+                        {
+                            "name": "recipes",
+                            "type": "Recipe[]"
+                        }
+                    ],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 39,
+                    "jsdoctags": [
+                        {
+                            "name": "recipes",
+                            "type": "Recipe[]",
+                            "tagName": {
+                                "text": "param"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "updateRecipe",
+                    "args": [
+                        {
+                            "name": "index",
+                            "type": "number"
+                        },
+                        {
+                            "name": "newRecipe",
+                            "type": "Recipe"
+                        }
+                    ],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 61,
+                    "jsdoctags": [
+                        {
+                            "name": "index",
+                            "type": "number",
+                            "tagName": {
+                                "text": "param"
+                            }
+                        },
+                        {
+                            "name": "newRecipe",
+                            "type": "Recipe",
+                            "tagName": {
+                                "text": "param"
+                            }
+                        }
+                    ]
+                }
+            ],
+            "description": "",
+            "sourceCode": "import { Injectable } from '@angular/core';\nimport { Recipe } from './recipe.model';\nimport { Ingredient } from '../shared/ingredient.model';\nimport { ShoppingListService } from '../shopping-list/shoppinglist.service';\nimport { Subject } from 'rxjs';\n\n@Injectable()\nexport class RecipeService {\n  recipesChanged = new Subject<Recipe[]>();\n\n  // private recipes: Recipe[] = [\n  //   new Recipe(\n  //     'Tequila Sunrise',\n  //     'An awesome alcoholic cocktail',\n  //     'https://cdn.pixabay.com/photo/2015/07/07/00/34/tequila-sunrise-833905__340.jpg',\n  //     [\n  //       new Ingredient('Lime', 1),\n  //       new Ingredient('Tequila', 2),\n  //       new Ingredient('Soda', 1),\n  //       new Ingredient('Gin', 2)\n  //     ]\n  //   ),\n  //   new Recipe(\n  //     'Cheese Burger',\n  //     'A gourmet 300g cheese burger with fries',\n  //     'https://cdn.pixabay.com/photo/2020/02/08/09/05/burger-4829526_960_720.jpg',\n  //     [\n  //       new Ingredient('Patty', 1),\n  //       new Ingredient('Cheese', 1),\n  //       new Ingredient('Fries', 15),\n  //       new Ingredient('Lettuce', 1)\n  //     ]\n  //   ),\n  // ];\n  private recipes: Recipe[] = [];\n\n  constructor(private slService: ShoppingListService) {}\n\n  setRecipes(recipes: Recipe[]){\n    this.recipes = recipes;\n    this.recipesChanged.next(this.recipes.slice());\n  }\n\n  getRecipes() {\n    return this.recipes.slice();\n  }\n\n  getRecipe(index: number){\n    return this.recipes[index];\n  }\n\n  addIngredientsToShoppingList(ingredients: Ingredient[]) {\n    this.slService.addIngredients(ingredients);\n  }\n\n  addRecipe(recipe: Recipe){\n    this.recipes.push(recipe);\n    this.recipesChanged.next(this.recipes.slice());\n  }\n\n  updateRecipe(index: number, newRecipe: Recipe) {\n    this.recipes[index] = newRecipe;\n    this.recipesChanged.next(this.recipes.slice());\n  }\n\n  deleteRecipe(index: number) {\n    this.recipes.splice(index, 1);\n    this.recipesChanged.next(this.recipes.slice());\n  }\n}\n",
+            "constructorObj": {
+                "name": "constructor",
+                "description": "",
+                "args": [
+                    {
+                        "name": "slService",
+                        "type": "ShoppingListService"
+                    }
+                ],
+                "line": 35,
+                "jsdoctags": [
+                    {
+                        "name": "slService",
+                        "type": "ShoppingListService",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    }
+                ]
+            },
+            "type": "injectable"
+        }
+    ],
+    "classes": [
+        {
+            "name": "AppPage",
+            "id": "class-AppPage-a0db91bfa3b9914e9048612074084ee6",
+            "file": "e2e/src/app.po.ts",
+            "type": "class",
+            "sourceCode": "import { browser, by, element } from 'protractor';\n\nexport class AppPage {\n  navigateTo(): Promise<unknown> {\n    return browser.get(browser.baseUrl) as Promise<unknown>;\n  }\n\n  getTitleText(): Promise<string> {\n    return element(by.css('app-root .content span')).getText() as Promise<string>;\n  }\n}\n",
+            "properties": [],
+            "methods": [
+                {
+                    "name": "getTitleText",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "Promise<string>",
+                    "typeParameters": [],
+                    "line": 8
+                },
+                {
+                    "name": "navigateTo",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "Promise<unknown>",
+                    "typeParameters": [],
+                    "line": 4
+                }
+            ],
+            "indexSignatures": [],
+            "inputsClass": [],
+            "outputsClass": [],
+            "hostBindings": [],
+            "hostListeners": []
+        },
+        {
+            "name": "Ingredient",
+            "id": "class-Ingredient-c32c649e80bb44e8d413092cba0c6d2e",
+            "file": "src/app/shared/ingredient.model.ts",
+            "type": "class",
+            "sourceCode": "export class Ingredient {\n  constructor(public name: string, public amount: number){\n  }\n}",
+            "constructorObj": {
+                "name": "constructor",
+                "description": "",
+                "args": [
+                    {
+                        "name": "name",
+                        "type": "string"
+                    },
+                    {
+                        "name": "amount",
+                        "type": "number"
+                    }
+                ],
+                "line": 14,
+                "jsdoctags": [
+                    {
+                        "name": "name",
+                        "type": "string",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    },
+                    {
+                        "name": "amount",
+                        "type": "number",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    }
+                ]
+            },
+            "properties": [
+                {
+                    "name": "amount",
+                    "type": "number",
+                    "optional": false,
+                    "description": "",
+                    "line": 15,
+                    "modifierKind": [
+                        114
+                    ]
+                },
+                {
+                    "name": "name",
+                    "type": "string",
+                    "optional": false,
+                    "description": "",
+                    "line": 15,
+                    "modifierKind": [
+                        114
+                    ]
+                }
+            ],
+            "methods": [],
+            "indexSignatures": [],
+            "inputsClass": [],
+            "outputsClass": [],
+            "hostBindings": [],
+            "hostListeners": []
+        },
+        {
+            "name": "Recipe",
+            "id": "class-Recipe-379e931d46983c44064ce657825c082b",
+            "file": "src/app/recipes/recipe.model.ts",
+            "type": "class",
+            "sourceCode": "import { Ingredient } from '../shared/ingredient.model';\n\nexport class Recipe {\n  public name: string;\n  public description: string;\n  public imagePath: string;\n  public ingredients: Ingredient[];\n\n  constructor(name: string, desc: string, imagePath: string, ingredients: Ingredient[]){\n    this.name = name;\n    this.description = desc;\n    this.imagePath = imagePath;\n    this.ingredients = ingredients;\n  }\n}",
+            "constructorObj": {
+                "name": "constructor",
+                "description": "",
+                "args": [
+                    {
+                        "name": "name",
+                        "type": "string"
+                    },
+                    {
+                        "name": "desc",
+                        "type": "string"
+                    },
+                    {
+                        "name": "imagePath",
+                        "type": "string"
+                    },
+                    {
+                        "name": "ingredients",
+                        "type": "Ingredient[]"
+                    }
+                ],
+                "line": 7,
+                "jsdoctags": [
+                    {
+                        "name": "name",
+                        "type": "string",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    },
+                    {
+                        "name": "desc",
+                        "type": "string",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    },
+                    {
+                        "name": "imagePath",
+                        "type": "string",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    },
+                    {
+                        "name": "ingredients",
+                        "type": "Ingredient[]",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    }
+                ]
+            },
+            "properties": [
+                {
+                    "name": "description",
+                    "type": "string",
+                    "optional": false,
+                    "description": "",
+                    "line": 5,
+                    "modifierKind": [
+                        114
+                    ]
+                },
+                {
+                    "name": "imagePath",
+                    "type": "string",
+                    "optional": false,
+                    "description": "",
+                    "line": 6,
+                    "modifierKind": [
+                        114
+                    ]
+                },
+                {
+                    "name": "ingredients",
+                    "type": "Ingredient[]",
+                    "optional": false,
+                    "description": "",
+                    "line": 7,
+                    "modifierKind": [
+                        114
+                    ]
+                },
+                {
+                    "name": "name",
+                    "type": "string",
+                    "optional": false,
+                    "description": "",
+                    "line": 4,
+                    "modifierKind": [
+                        114
+                    ]
+                }
+            ],
+            "methods": [],
+            "indexSignatures": [],
+            "inputsClass": [],
+            "outputsClass": [],
+            "hostBindings": [],
+            "hostListeners": []
+        },
+        {
+            "name": "ShoppingListService",
+            "id": "class-ShoppingListService-fb05f6f76d5335db3b75ba4726f4a822",
+            "file": "src/app/shopping-list/shoppinglist.service.ts",
+            "type": "class",
+            "sourceCode": "import { Subject } from 'rxjs';\nimport { Ingredient } from '../shared/ingredient.model';\n\nexport class ShoppingListService {\n  ingredientsChanged = new Subject<Ingredient[]>();\n  startedEditing = new Subject<number>();\n  private ingredients: Ingredient[] = [\n    new Ingredient('Apples', 5),\n    new Ingredient('Tomatoes', 10),\n  ];\n\n  getIngredients() {\n    return this.ingredients.slice();\n  }\n\n  getIngredient(index: number) {\n    return this.ingredients[index];\n  }\n\n  addIngredient(ingredient: Ingredient) {\n    this.ingredients.push(ingredient);\n    this.ingredientsChanged.next(this.ingredients.slice());\n  }\n\n  addIngredients(ingredients: Ingredient[]){\n    this.ingredients.push(...ingredients);\n    this.ingredientsChanged.next(this.ingredients.slice());\n  }\n\n  updateIngredient(index: number, newIngredient: Ingredient) {\n    this.ingredients[index] = newIngredient;\n    this.ingredientsChanged.next(this.ingredients.slice());\n  }\n\n  deleteIngredient(index: number) {\n    this.ingredients.splice(index, 1);\n    this.ingredientsChanged.next(this.ingredients.slice());\n  }\n}",
+            "properties": [
+                {
+                    "name": "ingredients",
+                    "defaultValue": "[\n    new Ingredient('Apples', 5),\n    new Ingredient('Tomatoes', 10),\n  ]",
+                    "type": "Ingredient[]",
+                    "optional": false,
+                    "description": "",
+                    "line": 7,
+                    "modifierKind": [
+                        112
+                    ]
+                },
+                {
+                    "name": "ingredientsChanged",
+                    "defaultValue": "new Subject<Ingredient[]>()",
+                    "type": "",
+                    "optional": false,
+                    "description": "",
+                    "line": 5
+                },
+                {
+                    "name": "startedEditing",
+                    "defaultValue": "new Subject<number>()",
+                    "type": "",
+                    "optional": false,
+                    "description": "",
+                    "line": 6
+                }
+            ],
+            "methods": [
+                {
+                    "name": "addIngredient",
+                    "args": [
+                        {
+                            "name": "ingredient",
+                            "type": "Ingredient"
+                        }
+                    ],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 20,
+                    "jsdoctags": [
+                        {
+                            "name": "ingredient",
+                            "type": "Ingredient",
+                            "tagName": {
+                                "text": "param"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "addIngredients",
+                    "args": [
+                        {
+                            "name": "ingredients",
+                            "type": "Ingredient[]"
+                        }
+                    ],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 25,
+                    "jsdoctags": [
+                        {
+                            "name": "ingredients",
+                            "type": "Ingredient[]",
+                            "tagName": {
+                                "text": "param"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "deleteIngredient",
+                    "args": [
+                        {
+                            "name": "index",
+                            "type": "number"
+                        }
+                    ],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 35,
+                    "jsdoctags": [
+                        {
+                            "name": "index",
+                            "type": "number",
+                            "tagName": {
+                                "text": "param"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "getIngredient",
+                    "args": [
+                        {
+                            "name": "index",
+                            "type": "number"
+                        }
+                    ],
+                    "optional": false,
+                    "returnType": "any",
+                    "typeParameters": [],
+                    "line": 16,
+                    "jsdoctags": [
+                        {
+                            "name": "index",
+                            "type": "number",
+                            "tagName": {
+                                "text": "param"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "getIngredients",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "any",
+                    "typeParameters": [],
+                    "line": 12
+                },
+                {
+                    "name": "updateIngredient",
+                    "args": [
+                        {
+                            "name": "index",
+                            "type": "number"
+                        },
+                        {
+                            "name": "newIngredient",
+                            "type": "Ingredient"
+                        }
+                    ],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 30,
+                    "jsdoctags": [
+                        {
+                            "name": "index",
+                            "type": "number",
+                            "tagName": {
+                                "text": "param"
+                            }
+                        },
+                        {
+                            "name": "newIngredient",
+                            "type": "Ingredient",
+                            "tagName": {
+                                "text": "param"
+                            }
+                        }
+                    ]
+                }
+            ],
+            "indexSignatures": [],
+            "inputsClass": [],
+            "outputsClass": [],
+            "hostBindings": [],
+            "hostListeners": []
+        },
+        {
+            "name": "User",
+            "id": "class-User-609b5623ea57ebf74512a9913fe14eab",
+            "file": "src/app/auth/user.model.ts",
+            "type": "class",
+            "sourceCode": "export class User {\n  constructor(\n    public email: string,\n    public id: string,\n    private _token: string,\n    private _tokenExpirationDate: Date\n  ) {}\n\n  get token() {\n    if(!this._tokenExpirationDate || new Date() > this._tokenExpirationDate){\n      return null;\n    }\n    return this._token\n  }\n}\n",
+            "constructorObj": {
+                "name": "constructor",
+                "description": "",
+                "args": [
+                    {
+                        "name": "email",
+                        "type": "string"
+                    },
+                    {
+                        "name": "id",
+                        "type": "string"
+                    },
+                    {
+                        "name": "_token",
+                        "type": "string"
+                    },
+                    {
+                        "name": "_tokenExpirationDate",
+                        "type": "Date"
+                    }
+                ],
+                "line": 1,
+                "jsdoctags": [
+                    {
+                        "name": "email",
+                        "type": "string",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    },
+                    {
+                        "name": "id",
+                        "type": "string",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    },
+                    {
+                        "name": "_token",
+                        "type": "string",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    },
+                    {
+                        "name": "_tokenExpirationDate",
+                        "type": "Date",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    }
+                ]
+            },
+            "properties": [
+                {
+                    "name": "email",
+                    "type": "string",
+                    "optional": false,
+                    "description": "",
+                    "line": 3,
+                    "modifierKind": [
+                        114
+                    ]
+                },
+                {
+                    "name": "id",
+                    "type": "string",
+                    "optional": false,
+                    "description": "",
+                    "line": 4,
+                    "modifierKind": [
+                        114
+                    ]
+                }
+            ],
+            "methods": [],
+            "indexSignatures": [],
+            "accessors": {
+                "token": {
+                    "name": "token",
+                    "getSignature": {
+                        "name": "token",
+                        "type": "",
+                        "returnType": "",
+                        "line": 9
+                    }
+                }
+            },
+            "inputsClass": [],
+            "outputsClass": [],
+            "hostBindings": [],
+            "hostListeners": []
+        }
+    ],
+    "directives": [
+        {
+            "name": "DropdownDirective",
+            "id": "directive-DropdownDirective-3a333b979d4a6be8c54d26a17f1e7dcb",
+            "file": "src/app/shared/dropdown.directive.ts",
+            "type": "directive",
+            "description": "",
+            "sourceCode": "import { Directive, HostListener, HostBinding } from '@angular/core';\n\n@Directive({\n  selector: '[appDropdown]'\n})\nexport class DropdownDirective {\n  @HostBinding('class.open') isOpen = false;\n  \n  @HostListener('click') toggleOpen() {\n    this.isOpen = !this.isOpen;\n  }\n}",
+            "selector": "[appDropdown]",
+            "providers": [],
+            "inputsClass": [],
+            "outputsClass": [],
+            "hostBindings": [
+                {
+                    "name": "class.open",
+                    "defaultValue": "false",
+                    "line": 7
+                }
+            ],
+            "hostListeners": [
+                {
+                    "name": "click",
+                    "args": [],
+                    "argsDecorator": [],
+                    "line": 9
+                }
+            ],
+            "propertiesClass": [],
+            "methodsClass": []
+        }
+    ],
+    "components": [
+        {
+            "name": "AlertComponent",
+            "id": "component-AlertComponent-5b0bb37baa9e6853708b9fccbda7e7f1",
+            "file": "src/app/shared/alert/alert.component.ts",
+            "encapsulation": [],
+            "entryComponents": [],
+            "inputs": [],
+            "outputs": [],
+            "providers": [],
+            "selector": "app-alert",
+            "styleUrls": [
+                "./alert.component.css"
+            ],
+            "styles": [],
+            "templateUrl": [
+                "./alert.component.html"
+            ],
+            "viewProviders": [],
+            "inputsClass": [
+                {
+                    "name": "message",
+                    "line": 9,
+                    "type": "string"
+                }
+            ],
+            "outputsClass": [
+                {
+                    "name": "close",
+                    "defaultValue": "new EventEmitter<void>()",
+                    "line": 10,
+                    "type": "EventEmitter"
+                }
+            ],
+            "propertiesClass": [],
+            "methodsClass": [
+                {
+                    "name": "onClose",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 12
+                }
+            ],
+            "hostBindings": [],
+            "hostListeners": [],
+            "description": "",
+            "rawdescription": "",
+            "type": "component",
+            "sourceCode": "import { Component, Input, Output, EventEmitter } from '@angular/core';\n\n@Component({\n  selector: 'app-alert',\n  templateUrl:  './alert.component.html',\n  styleUrls: ['./alert.component.css']\n})\nexport class AlertComponent {\n  @Input() message: string;\n  @Output() close = new EventEmitter<void>();\n\n  onClose(){\n    this.close.emit();\n  }\n}",
+            "assetsDirs": [],
+            "styleUrlsData": [
+                {
+                    "data": ".backdrop {\n  position: fixed;\n  top: 0;\n  left: 0;\n  width: 100vw;\n  height: 100vh;\n  background: rgba(0, 0, 0, 0.75);\n  z-index: 50;\n}\n\n.alert-box {\n  position: fixed;\n  top: 30vh;\n  left: 20vw;\n  width: 60vw;\n  padding: 16px;\n  z-index: 100;\n  background: white;\n  box-shadow: 0 2px 8px rgba(0,0,0,0.26);\n}\n\n.alert-box-actions {\n  text-align: right;\n}\n",
+                    "styleUrl": "./alert.component.css"
+                }
+            ],
+            "stylesData": "",
+            "templateData": "<div class=\"backdrop\" (click)=\"onClose()\"></div>\n<div class=\"alert-box\">\n  <p class=\"align-item-center\">{{ message }}</p>\n  <div class=\"alert-box-actions\">\n    <button class=\"btn btn-primary\" (click)=\"onClose()\">Close</button>\n  </div>\n</div>"
+        },
+        {
+            "name": "AppComponent",
+            "id": "component-AppComponent-78f71efc23ce9c1cf5cbc802b5777778",
+            "file": "src/app/app.component.ts",
+            "encapsulation": [],
+            "entryComponents": [],
+            "inputs": [],
+            "outputs": [],
+            "providers": [],
+            "selector": "app-root",
+            "styleUrls": [
+                "./app.component.css"
+            ],
+            "styles": [],
+            "templateUrl": [
+                "./app.component.html"
+            ],
+            "viewProviders": [],
+            "inputsClass": [],
+            "outputsClass": [],
+            "propertiesClass": [],
+            "methodsClass": [
+                {
+                    "name": "ngOnInit",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 12
+                }
+            ],
+            "hostBindings": [],
+            "hostListeners": [],
+            "description": "",
+            "rawdescription": "",
+            "type": "component",
+            "sourceCode": "import { Component, OnInit } from '@angular/core';\nimport { AuthService } from './auth/auth.service';\n\n@Component({\n  selector: 'app-root',\n  templateUrl: './app.component.html',\n  styleUrls: ['./app.component.css']\n})\nexport class AppComponent implements OnInit{\n  constructor(private authService: AuthService){}\n\n  ngOnInit(){\n    this.authService.autoLogin();\n  }\n}\n",
+            "assetsDirs": [],
+            "styleUrlsData": [
+                {
+                    "data": "",
+                    "styleUrl": "./app.component.css"
+                }
+            ],
+            "stylesData": "",
+            "constructorObj": {
+                "name": "constructor",
+                "description": "",
+                "args": [
+                    {
+                        "name": "authService",
+                        "type": "AuthService"
+                    }
+                ],
+                "line": 9,
+                "jsdoctags": [
+                    {
+                        "name": "authService",
+                        "type": "AuthService",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    }
+                ]
+            },
+            "implements": [
+                "OnInit"
+            ],
+            "templateData": "<app-header></app-header>\n<div class=\"container\">\n  <div class=\"row\">\n    <div class=\"col-md-12\">\n      <router-outlet></router-outlet>\n    </div>\n  </div>\n</div>\n\n\n"
+        },
+        {
+            "name": "AuthComponent",
+            "id": "component-AuthComponent-51df011197d31c3e86a363eab1dda165",
+            "file": "src/app/auth/auth.component.ts",
+            "encapsulation": [],
+            "entryComponents": [],
+            "inputs": [],
+            "outputs": [],
+            "providers": [],
+            "selector": "app-auth",
+            "styleUrls": [],
+            "styles": [],
+            "templateUrl": [
+                "./auth.component.html"
+            ],
+            "viewProviders": [],
+            "inputsClass": [],
+            "outputsClass": [],
+            "propertiesClass": [
+                {
+                    "name": "error",
+                    "defaultValue": "null",
+                    "type": "string",
+                    "optional": false,
+                    "description": "",
+                    "line": 15
+                },
+                {
+                    "name": "isLoading",
+                    "defaultValue": "false",
+                    "type": "",
+                    "optional": false,
+                    "description": "",
+                    "line": 14
+                },
+                {
+                    "name": "isLoginMode",
+                    "defaultValue": "true",
+                    "type": "",
+                    "optional": false,
+                    "description": "",
+                    "line": 13
+                }
+            ],
+            "methodsClass": [
+                {
+                    "name": "onHandleError",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 55
+                },
+                {
+                    "name": "onSubmit",
+                    "args": [
+                        {
+                            "name": "form",
+                            "type": "NgForm"
+                        }
+                    ],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 23,
+                    "jsdoctags": [
+                        {
+                            "name": "form",
+                            "type": "NgForm",
+                            "tagName": {
+                                "text": "param"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "onSwitchMode",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 19
+                }
+            ],
+            "hostBindings": [],
+            "hostListeners": [],
+            "description": "",
+            "rawdescription": "",
+            "type": "component",
+            "sourceCode": "import { Component } from '@angular/core';\nimport { NgForm } from '@angular/forms';\n\nimport { AuthService, AuthResponseData } from './auth.service';\nimport { Observable } from 'rxjs';\nimport { Router } from '@angular/router';\n\n@Component({\n  selector: 'app-auth',\n  templateUrl: './auth.component.html',\n})\nexport class AuthComponent {\n  isLoginMode = true;\n  isLoading = false;\n  error: string = null;\n\n  constructor(private authService: AuthService, private router: Router) {}\n\n  onSwitchMode() {\n    this.isLoginMode = !this.isLoginMode;\n  }\n\n  onSubmit(form: NgForm) {\n    if (!form.valid) {\n      return;\n    }\n    const email = form.value.email;\n    const password = form.value.password;\n\n    let authObs: Observable<AuthResponseData>\n\n    this.isLoading = true;\n    if (this.isLoginMode) {\n      authObs = this.authService.login(email, password)\n    } else {\n      authObs = this.authService.signUp(email, password)\n    }\n\n    authObs.subscribe(\n      (resData) => {\n        console.log(resData);\n        this.isLoading = false;\n        this.router.navigate(['/recipes']);\n      },\n      (errorMessage) => {\n        console.log(errorMessage);\n        this.error = errorMessage;\n        this.isLoading = false;\n      }\n    );\n\n    form.reset();\n  }\n\n  onHandleError(){\n    this.error = null;\n  }\n}\n",
+            "assetsDirs": [],
+            "styleUrlsData": "",
+            "stylesData": "",
+            "constructorObj": {
+                "name": "constructor",
+                "description": "",
+                "args": [
+                    {
+                        "name": "authService",
+                        "type": "AuthService"
+                    },
+                    {
+                        "name": "router",
+                        "type": "Router"
+                    }
+                ],
+                "line": 15,
+                "jsdoctags": [
+                    {
+                        "name": "authService",
+                        "type": "AuthService",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    },
+                    {
+                        "name": "router",
+                        "type": "Router",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    }
+                ]
+            },
+            "templateData": "<div class=\"row\">\n  <div class=\"col-xs-12 col-md-6 col-md-offset-3\">\n    <!-- <div class=\"alert alert-danger\" *ngIf=\"error\">\n      <p>{{ error }}</p>\n    </div> -->\n    <app-alert [message]=\"error\" *ngIf=\"error\" (close)=\"onHandleError()\"></app-alert>\n    <div *ngIf=\"isLoading\" style=\"text-align:center;\"> \n      <app-loading-spinner></app-loading-spinner>\n    </div>\n    <form #authForm=\"ngForm\" (ngSubmit)=\"onSubmit(authForm)\" *ngIf=\"!isLoading\">\n      <div class=\"form-group\">\n        <label for=\"email\">E-Mail</label>\n        <input\n          type=\"email\"\n          id=\"email\"\n          class=\"form-control\"\n          ngModel\n          name=\"email\"\n          required\n          email\n        />\n      </div>\n      <div class=\"form-group\">\n        <label for=\"password\">Password</label>\n        <input\n          type=\"password\"\n          id=\"password\"\n          class=\"form-control\"\n          ngModel\n          name=\"password\"\n          required\n          minlength=\"6\"\n        />\n      </div>\n      <div>\n        <button class=\"btn btn-primary\" type=\"submit\" [disabled]=\"!authForm.valid\">\n          {{ isLoginMode ? \"Login\" : \"Sign Up\" }}\n        </button>\n        |\n        <button class=\"btn btn-primary\" (click)=\"onSwitchMode()\" type=\"button\">\n          Switch to {{ isLoginMode ? \"Sign Up\" : \"Login\" }}\n        </button>\n      </div>\n    </form>\n  </div>\n</div>\n"
+        },
+        {
+            "name": "ButtonComponent",
+            "id": "component-ButtonComponent-642c6c4e474cd5a0ac760dfda26b2fc9",
+            "file": "src/stories/button.component.ts",
+            "encapsulation": [],
+            "entryComponents": [],
+            "inputs": [],
+            "outputs": [],
+            "providers": [],
+            "selector": "storybook-button",
+            "styleUrls": [
+                "./button.css"
+            ],
+            "styles": [],
+            "template": "<button   type=\"button\"\n   (click)=\"onClick.emit($event)\"\n   [ngClass]=\"classes\"\n   [ngStyle]=\"{ 'background-color': backgroundColor }\"\n >\n   {{ label }}\n </button>",
+            "templateUrl": [],
+            "viewProviders": [],
+            "inputsClass": [
+                {
+                    "name": "backgroundColor",
+                    "description": "<p>What background color to use</p>\n",
+                    "line": 26,
+                    "type": "string"
+                },
+                {
+                    "name": "label",
+                    "defaultValue": "'Button'",
+                    "description": "<p>Button contents</p>\n",
+                    "line": 40
+                },
+                {
+                    "name": "primary",
+                    "defaultValue": "false",
+                    "description": "<p>Is this the principal call to action on the page?</p>\n",
+                    "line": 20
+                },
+                {
+                    "name": "size",
+                    "defaultValue": "'medium'",
+                    "description": "<p>How large should the button be?</p>\n",
+                    "line": 32,
+                    "type": "\"small\" | \"medium\" | \"large\""
+                }
+            ],
+            "outputsClass": [
+                {
+                    "name": "onClick",
+                    "defaultValue": "new EventEmitter<Event>()",
+                    "description": "<p>Optional click handler</p>\n",
+                    "line": 46,
+                    "type": "EventEmitter"
+                }
+            ],
+            "propertiesClass": [],
+            "methodsClass": [],
+            "hostBindings": [],
+            "hostListeners": [],
+            "description": "",
+            "rawdescription": "",
+            "type": "component",
+            "sourceCode": "import { Component, Input, Output, EventEmitter } from '@angular/core';\n\n@Component({\n  selector: 'storybook-button',\n  template: ` <button\n    type=\"button\"\n    (click)=\"onClick.emit($event)\"\n    [ngClass]=\"classes\"\n    [ngStyle]=\"{ 'background-color': backgroundColor }\"\n  >\n    {{ label }}\n  </button>`,\n  styleUrls: ['./button.css'],\n})\nexport default class ButtonComponent {\n  /**\n   * Is this the principal call to action on the page?\n   */\n  @Input()\n  primary = false;\n\n  /**\n   * What background color to use\n   */\n  @Input()\n  backgroundColor?: string;\n\n  /**\n   * How large should the button be?\n   */\n  @Input()\n  size: 'small' | 'medium' | 'large' = 'medium';\n\n  /**\n   * Button contents\n   *\n   * @required\n   */\n  @Input()\n  label = 'Button';\n\n  /**\n   * Optional click handler\n   */\n  @Output()\n  onClick = new EventEmitter<Event>();\n\n  public get classes(): string[] {\n    const mode = this.primary ? 'storybook-button--primary' : 'storybook-button--secondary';\n\n    return ['storybook-button', `storybook-button--${this.size}`, mode];\n  }\n}\n",
+            "assetsDirs": [],
+            "styleUrlsData": [
+                {
+                    "data": ".storybook-button {\n  font-family: 'Nunito Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;\n  font-weight: 700;\n  border: 0;\n  border-radius: 3em;\n  cursor: pointer;\n  display: inline-block;\n  line-height: 1;\n}\n.storybook-button--primary {\n  color: white;\n  background-color: #1ea7fd;\n}\n.storybook-button--secondary {\n  color: #333;\n  background-color: transparent;\n  box-shadow: rgba(0, 0, 0, 0.15) 0px 0px 0px 1px inset;\n}\n.storybook-button--small {\n  font-size: 12px;\n  padding: 10px 16px;\n}\n.storybook-button--medium {\n  font-size: 14px;\n  padding: 11px 20px;\n}\n.storybook-button--large {\n  font-size: 16px;\n  padding: 12px 24px;\n}\n",
+                    "styleUrl": "./button.css"
+                }
+            ],
+            "stylesData": "",
+            "accessors": {
+                "classes": {
+                    "name": "classes",
+                    "getSignature": {
+                        "name": "classes",
+                        "type": "[]",
+                        "returnType": "string[]",
+                        "line": 48
+                    }
+                }
+            }
+        },
+        {
+            "name": "HeaderComponent",
+            "id": "component-HeaderComponent-246e2a69dc126a3bd76c6328dd3b93e2",
+            "file": "src/stories/header.component.ts",
+            "encapsulation": [],
+            "entryComponents": [],
+            "inputs": [],
+            "outputs": [],
+            "providers": [],
+            "selector": "storybook-header",
+            "styleUrls": [
+                "./header.css"
+            ],
+            "styles": [],
+            "template": "<header>    <div class=\"wrapper\">\n      <div>\n        <svg width=\"32\" height=\"32\" viewBox=\"0 0 32 32\" xmlns=\"http://www.w3.org/2000/svg\">\n          <g fill=\"none\" fillRule=\"evenodd\">\n            <path\n              d=\"M10 0h12a10 10 0 0110 10v12a10 10 0 01-10 10H10A10 10 0 010 22V10A10 10 0 0110 0z\"\n              fill=\"#FFF\"\n            />\n            <path\n              d=\"M5.3 10.6l10.4 6v11.1l-10.4-6v-11zm11.4-6.2l9.7 5.5-9.7 5.6V4.4z\"\n              fill=\"#555AB9\"\n            />\n            <path\n              d=\"M27.2 10.6v11.2l-10.5 6V16.5l10.5-6zM15.7 4.4v11L6 10l9.7-5.5z\"\n              fill=\"#91BAF8\"\n            />\n          </g>\n        </svg>\n        <h1>Acme</h1>\n      </div>\n      <div>\n        <storybook-button\n          *ngIf=\"user\"\n          size=\"small\"\n          (onClick)=\"onLogout.emit($event)\"\n          label=\"Log out\"\n        ></storybook-button>\n        <storybook-button\n          *ngIf=\"!user\"\n          size=\"small\"\n          (onClick)=\"onLogin.emit($event)\"\n          label=\"Log in\"\n        ></storybook-button>\n        <storybook-button\n          *ngIf=\"!user\"\n          primary\n          size=\"small\"\n          (onClick)=\"onCreateAccount.emit($event)\"\n          label=\"Sign up\"\n        ></storybook-button>\n      </div>\n    </div>\n  </header>",
+            "templateUrl": [],
+            "viewProviders": [],
+            "inputsClass": [
+                {
+                    "name": "user",
+                    "defaultValue": "null",
+                    "line": 53,
+                    "type": "unknown"
+                }
+            ],
+            "outputsClass": [
+                {
+                    "name": "onCreateAccount",
+                    "defaultValue": "new EventEmitter<Event>()",
+                    "line": 62,
+                    "type": "EventEmitter"
+                },
+                {
+                    "name": "onLogin",
+                    "defaultValue": "new EventEmitter<Event>()",
+                    "line": 56,
+                    "type": "EventEmitter"
+                },
+                {
+                    "name": "onLogout",
+                    "defaultValue": "new EventEmitter<Event>()",
+                    "line": 59,
+                    "type": "EventEmitter"
+                }
+            ],
+            "propertiesClass": [],
+            "methodsClass": [],
+            "hostBindings": [],
+            "hostListeners": [],
+            "description": "",
+            "rawdescription": "",
+            "type": "component",
+            "sourceCode": "import { Component, Input, Output, EventEmitter } from '@angular/core';\n\n@Component({\n  selector: 'storybook-header',\n  template: `<header>\n    <div class=\"wrapper\">\n      <div>\n        <svg width=\"32\" height=\"32\" viewBox=\"0 0 32 32\" xmlns=\"http://www.w3.org/2000/svg\">\n          <g fill=\"none\" fillRule=\"evenodd\">\n            <path\n              d=\"M10 0h12a10 10 0 0110 10v12a10 10 0 01-10 10H10A10 10 0 010 22V10A10 10 0 0110 0z\"\n              fill=\"#FFF\"\n            />\n            <path\n              d=\"M5.3 10.6l10.4 6v11.1l-10.4-6v-11zm11.4-6.2l9.7 5.5-9.7 5.6V4.4z\"\n              fill=\"#555AB9\"\n            />\n            <path\n              d=\"M27.2 10.6v11.2l-10.5 6V16.5l10.5-6zM15.7 4.4v11L6 10l9.7-5.5z\"\n              fill=\"#91BAF8\"\n            />\n          </g>\n        </svg>\n        <h1>Acme</h1>\n      </div>\n      <div>\n        <storybook-button\n          *ngIf=\"user\"\n          size=\"small\"\n          (onClick)=\"onLogout.emit($event)\"\n          label=\"Log out\"\n        ></storybook-button>\n        <storybook-button\n          *ngIf=\"!user\"\n          size=\"small\"\n          (onClick)=\"onLogin.emit($event)\"\n          label=\"Log in\"\n        ></storybook-button>\n        <storybook-button\n          *ngIf=\"!user\"\n          primary\n          size=\"small\"\n          (onClick)=\"onCreateAccount.emit($event)\"\n          label=\"Sign up\"\n        ></storybook-button>\n      </div>\n    </div>\n  </header>`,\n  styleUrls: ['./header.css'],\n})\nexport default class HeaderComponent {\n  @Input()\n  user: unknown = null;\n\n  @Output()\n  onLogin = new EventEmitter<Event>();\n\n  @Output()\n  onLogout = new EventEmitter<Event>();\n\n  @Output()\n  onCreateAccount = new EventEmitter<Event>();\n}\n",
+            "assetsDirs": [],
+            "styleUrlsData": [
+                {
+                    "data": ".wrapper {\n  font-family: 'Nunito Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;\n  border-bottom: 1px solid rgba(0, 0, 0, 0.1);\n  padding: 15px 20px;\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n}\n\nsvg {\n  display: inline-block;\n  vertical-align: top;\n}\n\nh1 {\n  font-weight: 900;\n  font-size: 20px;\n  line-height: 1;\n  margin: 6px 0 6px 10px;\n  display: inline-block;\n  vertical-align: top;\n}\n\nbutton + button {\n  margin-left: 10px;\n}\n",
+                    "styleUrl": "./header.css"
+                }
+            ],
+            "stylesData": ""
+        },
+        {
+            "name": "HeaderComponent",
+            "id": "component-HeaderComponent-cb408e435fd35572a31e57d3f5e3529a-1",
+            "file": "src/app/header/header.component.ts",
+            "encapsulation": [],
+            "entryComponents": [],
+            "inputs": [],
+            "outputs": [],
+            "providers": [],
+            "selector": "app-header",
+            "styleUrls": [],
+            "styles": [],
+            "templateUrl": [
+                "./header.component.html"
+            ],
+            "viewProviders": [],
+            "inputsClass": [],
+            "outputsClass": [],
+            "propertiesClass": [
+                {
+                    "name": "isAuthenticated",
+                    "defaultValue": "false",
+                    "type": "",
+                    "optional": false,
+                    "description": "",
+                    "line": 11
+                },
+                {
+                    "name": "userSub",
+                    "type": "Subscription",
+                    "optional": false,
+                    "description": "",
+                    "line": 12,
+                    "modifierKind": [
+                        112
+                    ]
+                }
+            ],
+            "methodsClass": [
+                {
+                    "name": "ngOnDestroy",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 36
+                },
+                {
+                    "name": "ngOnInit",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 16
+                },
+                {
+                    "name": "onFetchData",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 28
+                },
+                {
+                    "name": "onLogout",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 32
+                },
+                {
+                    "name": "onSaveData",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 24
+                }
+            ],
+            "hostBindings": [],
+            "hostListeners": [],
+            "description": "",
+            "rawdescription": "",
+            "type": "component",
+            "sourceCode": "import { Component, OnInit, OnDestroy } from '@angular/core';\nimport { DataStorageService } from '../shared/data-storage.service';\nimport { AuthService } from '../auth/auth.service';\nimport { Subscription } from 'rxjs';\n\n@Component({\n  selector: 'app-header',\n  templateUrl: './header.component.html'\n})\nexport class HeaderComponent implements OnInit, OnDestroy {\n  isAuthenticated = false;\n  private userSub: Subscription;\n\n  constructor(private dataStorageService: DataStorageService, private authService: AuthService){}\n\n  ngOnInit(){\n    this.userSub = this.authService.user.subscribe(user => {\n      this.isAuthenticated = !!user;\n      console.log(!user);\n      console.log(!!user);\n    });\n  }\n\n  onSaveData(){\n    this.dataStorageService.storeRecipes();\n  }\n\n  onFetchData(){\n    this.dataStorageService.fetchRecipes().subscribe();\n  }\n\n  onLogout(){\n    this.authService.logout();\n  }\n\n  ngOnDestroy(){\n    this.userSub.unsubscribe();\n  }\n}",
+            "assetsDirs": [],
+            "styleUrlsData": "",
+            "stylesData": "",
+            "constructorObj": {
+                "name": "constructor",
+                "description": "",
+                "args": [
+                    {
+                        "name": "dataStorageService",
+                        "type": "DataStorageService"
+                    },
+                    {
+                        "name": "authService",
+                        "type": "AuthService"
+                    }
+                ],
+                "line": 12,
+                "jsdoctags": [
+                    {
+                        "name": "dataStorageService",
+                        "type": "DataStorageService",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    },
+                    {
+                        "name": "authService",
+                        "type": "AuthService",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    }
+                ]
+            },
+            "implements": [
+                "OnInit",
+                "OnDestroy"
+            ],
+            "isDuplicate": true,
+            "duplicateId": 1,
+            "duplicateName": "HeaderComponent-1",
+            "templateData": "<nav class=\"navbar navbar-default\">\n  <div class=\"container-fluid\">\n    <div class=\"navbar-header\">\n      <a href=\"#\" class=\"navbar-brand\">Recipe Book</a>\n    </div>\n\n    <div class=\"collapse navbar-collapse\">\n      <ul class=\"nav navbar-nav\">\n        <li routerLinkActive=\"active\" *ngIf=\"isAuthenticated\"><a routerLink=\"/recipes\">Recipe</a></li>\n        <li routerLinkActive=\"active\" *ngIf=\"!isAuthenticated\"><a routerLink=\"/auth\">Authenticate</a></li>\n        <li routerLinkActive=\"active\"><a routerLink=\"/shopping-list\">Shopping List</a></li>\n      </ul>\n      <ul class=\"nav navbar-nav navbar-right\">\n        <li>\n          <a style=\"cursor: pointer;\" *ngIf=\"isAuthenticated\" (click)=\"onLogout()\">Logout</a>\n        </li>\n        <li class=\"dropdown\" appDropdown *ngIf=\"isAuthenticated\">\n          <a style=\"cursor: pointer;\" class=\"dropdown-toggle\" role=\"button\">Manage <span class=\"caret\"></span></a>\n          <ul class=\"dropdown-menu\">\n            <li><a style=\"cursor: pointer;\" (click)=\"onSaveData()\">Save Data</a></li>\n            <li><a style=\"cursor: pointer;\" (click)=\"onFetchData()\">Fetch Data</a></li>\n          </ul>\n        </li>\n      </ul>\n    </div>\n  </div>\n</nav>"
+        },
+        {
+            "name": "LoadingSpinnerComponent",
+            "id": "component-LoadingSpinnerComponent-7288384b958202e03e7d5d9ddb5496a7",
+            "file": "src/app/shared/loading-spinner/loading-spinner.component.ts",
+            "encapsulation": [],
+            "entryComponents": [],
+            "inputs": [],
+            "outputs": [],
+            "providers": [],
+            "selector": "app-loading-spinner",
+            "styleUrls": [
+                "./loading-spinner.component.css"
+            ],
+            "styles": [],
+            "template": "<div class=\"lds-ring\"><div></div><div></div><div></div><div></div></div>",
+            "templateUrl": [],
+            "viewProviders": [],
+            "inputsClass": [],
+            "outputsClass": [],
+            "propertiesClass": [],
+            "methodsClass": [],
+            "hostBindings": [],
+            "hostListeners": [],
+            "description": "",
+            "rawdescription": "",
+            "type": "component",
+            "sourceCode": "import { Component } from '@angular/core';\n\n@Component({\n  selector: 'app-loading-spinner',\n  template: '<div class=\"lds-ring\"><div></div><div></div><div></div><div></div></div>',\n  styleUrls: ['./loading-spinner.component.css']\n})\nexport class LoadingSpinnerComponent{\n\n}",
+            "assetsDirs": [],
+            "styleUrlsData": [
+                {
+                    "data": ".lds-ring {\n  display: inline-block;\n  position: relative;\n  width: 80px;\n  height: 80px;\n}\n.lds-ring div {\n  box-sizing: border-box;\n  display: block;\n  position: absolute;\n  width: 64px;\n  height: 64px;\n  margin: 8px;\n  border: 8px solid black;\n  border-radius: 50%;\n  animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;\n  border-color: black transparent transparent transparent;\n}\n.lds-ring div:nth-child(1) {\n  animation-delay: -0.45s;\n}\n.lds-ring div:nth-child(2) {\n  animation-delay: -0.3s;\n}\n.lds-ring div:nth-child(3) {\n  animation-delay: -0.15s;\n}\n@keyframes lds-ring {\n  0% {\n    transform: rotate(0deg);\n  }\n  100% {\n    transform: rotate(360deg);\n  }\n}\n",
+                    "styleUrl": "./loading-spinner.component.css"
+                }
+            ],
+            "stylesData": ""
+        },
+        {
+            "name": "PageComponent",
+            "id": "component-PageComponent-cca1a8911321fa17756ce90c90de65cc",
+            "file": "src/stories/page.component.ts",
+            "encapsulation": [],
+            "entryComponents": [],
+            "inputs": [],
+            "outputs": [],
+            "providers": [],
+            "selector": "storybook-page",
+            "styleUrls": [
+                "./page.css"
+            ],
+            "styles": [],
+            "template": "<article>    <storybook-header\n      [user]=\"user\"\n      (onLogout)=\"onLogout.emit($event)\"\n      (onLogin)=\"onLogin.emit($event)\"\n      (onCreateAccount)=\"onCreateAccount.emit($event)\"\n    ></storybook-header>\n    <section>\n      <h2>Pages in Storybook</h2>\n      <p>\n        We recommend building UIs with a\n        <a href=\"https://componentdriven.org\" target=\"_blank\" rel=\"noopener noreferrer\">\n          <strong>component-driven</strong>\n        </a>\n        process starting with atomic components and ending with pages.\n      </p>\n      <p>\n        Render pages with mock data. This makes it easy to build and review page states without\n        needing to navigate to them in your app. Here are some handy patterns for managing page data\n        in Storybook:\n      </p>\n      <ul>\n        <li>\n          Use a higher-level connected component. Storybook helps you compose such data from the\n          \"args\" of child component stories\n        </li>\n        <li>\n          Assemble data in the page component from your services. You can mock these services out\n          using Storybook.\n        </li>\n      </ul>\n      <p>\n        Get a guided tutorial on component-driven development at\n        <a href=\"https://www.learnstorybook.com\" target=\"_blank\" rel=\"noopener noreferrer\">\n          Learn Storybook\n        </a>\n        . Read more in the\n        <a href=\"https://storybook.js.org/docs\" target=\"_blank\" rel=\"noopener noreferrer\">\n          docs\n        </a>\n        .\n      </p>\n      <div class=\"tip-wrapper\">\n        <span class=\"tip\">Tip</span> Adjust the width of the canvas with the\n        <svg width=\"10\" height=\"10\" viewBox=\"0 0 12 12\" xmlns=\"http://www.w3.org/2000/svg\">\n          <g fill=\"none\" fillRule=\"evenodd\">\n            <path\n              d=\"M1.5 5.2h4.8c.3 0 .5.2.5.4v5.1c-.1.2-.3.3-.4.3H1.4a.5.5 0 01-.5-.4V5.7c0-.3.2-.5.5-.5zm0-2.1h6.9c.3 0 .5.2.5.4v7a.5.5 0 01-1 0V4H1.5a.5.5 0 010-1zm0-2.1h9c.3 0 .5.2.5.4v9.1a.5.5 0 01-1 0V2H1.5a.5.5 0 010-1zm4.3 5.2H2V10h3.8V6.2z\"\n              id=\"a\"\n              fill=\"#999\"\n            />\n          </g>\n        </svg>\n        Viewports addon in the toolbar\n      </div>\n    </section>\n  </article>",
+            "templateUrl": [],
+            "viewProviders": [],
+            "inputsClass": [
+                {
+                    "name": "user",
+                    "defaultValue": "null",
+                    "line": 66,
+                    "type": "unknown"
+                }
+            ],
+            "outputsClass": [
+                {
+                    "name": "onCreateAccount",
+                    "defaultValue": "new EventEmitter<Event>()",
+                    "line": 75,
+                    "type": "EventEmitter"
+                },
+                {
+                    "name": "onLogin",
+                    "defaultValue": "new EventEmitter<Event>()",
+                    "line": 69,
+                    "type": "EventEmitter"
+                },
+                {
+                    "name": "onLogout",
+                    "defaultValue": "new EventEmitter<Event>()",
+                    "line": 72,
+                    "type": "EventEmitter"
+                }
+            ],
+            "propertiesClass": [],
+            "methodsClass": [],
+            "hostBindings": [],
+            "hostListeners": [],
+            "description": "",
+            "rawdescription": "",
+            "type": "component",
+            "sourceCode": "import { Component, Input, Output, EventEmitter } from '@angular/core';\n\n@Component({\n  selector: 'storybook-page',\n  template: `<article>\n    <storybook-header\n      [user]=\"user\"\n      (onLogout)=\"onLogout.emit($event)\"\n      (onLogin)=\"onLogin.emit($event)\"\n      (onCreateAccount)=\"onCreateAccount.emit($event)\"\n    ></storybook-header>\n    <section>\n      <h2>Pages in Storybook</h2>\n      <p>\n        We recommend building UIs with a\n        <a href=\"https://componentdriven.org\" target=\"_blank\" rel=\"noopener noreferrer\">\n          <strong>component-driven</strong>\n        </a>\n        process starting with atomic components and ending with pages.\n      </p>\n      <p>\n        Render pages with mock data. This makes it easy to build and review page states without\n        needing to navigate to them in your app. Here are some handy patterns for managing page data\n        in Storybook:\n      </p>\n      <ul>\n        <li>\n          Use a higher-level connected component. Storybook helps you compose such data from the\n          \"args\" of child component stories\n        </li>\n        <li>\n          Assemble data in the page component from your services. You can mock these services out\n          using Storybook.\n        </li>\n      </ul>\n      <p>\n        Get a guided tutorial on component-driven development at\n        <a href=\"https://www.learnstorybook.com\" target=\"_blank\" rel=\"noopener noreferrer\">\n          Learn Storybook\n        </a>\n        . Read more in the\n        <a href=\"https://storybook.js.org/docs\" target=\"_blank\" rel=\"noopener noreferrer\">\n          docs\n        </a>\n        .\n      </p>\n      <div class=\"tip-wrapper\">\n        <span class=\"tip\">Tip</span> Adjust the width of the canvas with the\n        <svg width=\"10\" height=\"10\" viewBox=\"0 0 12 12\" xmlns=\"http://www.w3.org/2000/svg\">\n          <g fill=\"none\" fillRule=\"evenodd\">\n            <path\n              d=\"M1.5 5.2h4.8c.3 0 .5.2.5.4v5.1c-.1.2-.3.3-.4.3H1.4a.5.5 0 01-.5-.4V5.7c0-.3.2-.5.5-.5zm0-2.1h6.9c.3 0 .5.2.5.4v7a.5.5 0 01-1 0V4H1.5a.5.5 0 010-1zm0-2.1h9c.3 0 .5.2.5.4v9.1a.5.5 0 01-1 0V2H1.5a.5.5 0 010-1zm4.3 5.2H2V10h3.8V6.2z\"\n              id=\"a\"\n              fill=\"#999\"\n            />\n          </g>\n        </svg>\n        Viewports addon in the toolbar\n      </div>\n    </section>\n  </article>`,\n  styleUrls: ['./page.css'],\n})\nexport default class PageComponent {\n  @Input()\n  user: unknown = null;\n\n  @Output()\n  onLogin = new EventEmitter<Event>();\n\n  @Output()\n  onLogout = new EventEmitter<Event>();\n\n  @Output()\n  onCreateAccount = new EventEmitter<Event>();\n}\n\n// export const Page = ({ user, onLogin, onLogout, onCreateAccount }) => (\n//   <article>\n//     <Header user={user} onLogin={onLogin} onLogout={onLogout} onCreateAccount={onCreateAccount} />\n\n// );\n// Page.propTypes = {\n//   user: PropTypes.shape({}),\n//   onLogin: PropTypes.func.isRequired,\n//   onLogout: PropTypes.func.isRequired,\n//   onCreateAccount: PropTypes.func.isRequired,\n// };\n\n// Page.defaultProps = {\n//   user: null,\n// };\n",
+            "assetsDirs": [],
+            "styleUrlsData": [
+                {
+                    "data": "section {\n  font-family: 'Nunito Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;\n  font-size: 14px;\n  line-height: 24px;\n  padding: 48px 20px;\n  margin: 0 auto;\n  max-width: 600px;\n  color: #333;\n}\n\nh2 {\n  font-weight: 900;\n  font-size: 32px;\n  line-height: 1;\n  margin: 0 0 4px;\n  display: inline-block;\n  vertical-align: top;\n}\n\np {\n  margin: 1em 0;\n}\n\na {\n  text-decoration: none;\n  color: #1ea7fd;\n}\n\nul {\n  padding-left: 30px;\n  margin: 1em 0;\n}\n\nli {\n  margin-bottom: 8px;\n}\n\n.tip {\n  display: inline-block;\n  border-radius: 1em;\n  font-size: 11px;\n  line-height: 12px;\n  font-weight: 700;\n  background: #e7fdd8;\n  color: #66bf3c;\n  padding: 4px 12px;\n  margin-right: 10px;\n  vertical-align: top;\n}\n\n.tip-wrapper {\n  font-size: 13px;\n  line-height: 20px;\n  margin-top: 40px;\n  margin-bottom: 40px;\n}\n\n.tip-wrapper svg {\n  display: inline-block;\n  height: 12px;\n  width: 12px;\n  margin-right: 4px;\n  vertical-align: top;\n  margin-top: 3px;\n}\n\n.tip-wrapper svg path {\n  fill: #1ea7fd;\n}\n",
+                    "styleUrl": "./page.css"
+                }
+            ],
+            "stylesData": ""
+        },
+        {
+            "name": "RecipeDetailComponent",
+            "id": "component-RecipeDetailComponent-98f51aac71f27cd52e0644b174b4b274",
+            "file": "src/app/recipes/recipe-detail/recipe-detail.component.ts",
+            "encapsulation": [],
+            "entryComponents": [],
+            "inputs": [],
+            "outputs": [],
+            "providers": [],
+            "selector": "app-recipe-detail",
+            "styleUrls": [
+                "./recipe-detail.component.css"
+            ],
+            "styles": [],
+            "templateUrl": [
+                "./recipe-detail.component.html"
+            ],
+            "viewProviders": [],
+            "inputsClass": [],
+            "outputsClass": [],
+            "propertiesClass": [
+                {
+                    "name": "id",
+                    "type": "number",
+                    "optional": false,
+                    "description": "",
+                    "line": 13
+                },
+                {
+                    "name": "recipe",
+                    "type": "Recipe",
+                    "optional": false,
+                    "description": "",
+                    "line": 12
+                }
+            ],
+            "methodsClass": [
+                {
+                    "name": "ngOnInit",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 17
+                },
+                {
+                    "name": "onAddToShoppingList",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 26
+                },
+                {
+                    "name": "onDeleteRecipe",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 35
+                },
+                {
+                    "name": "onEditRecipe",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 30
+                }
+            ],
+            "hostBindings": [],
+            "hostListeners": [],
+            "description": "",
+            "rawdescription": "",
+            "type": "component",
+            "sourceCode": "import { Component, OnInit } from '@angular/core';\nimport { Recipe } from '../recipe.model';\nimport { RecipeService } from '../recipe.service';\nimport { ActivatedRoute, Params, Router } from '@angular/router';\n\n@Component({\n  selector: 'app-recipe-detail',\n  templateUrl: './recipe-detail.component.html',\n  styleUrls: ['./recipe-detail.component.css']\n})\nexport class RecipeDetailComponent implements OnInit {\n  recipe: Recipe;\n  id: number;\n\n  constructor(private recipeService: RecipeService, private route: ActivatedRoute, private router: Router) { }\n\n  ngOnInit(): void {\n    this.route.params.subscribe(\n      (params:  Params) => {\n        this.id = +params['id'];\n        this.recipe = this.recipeService.getRecipe(this.id);\n      }\n    );\n  }\n\n  onAddToShoppingList(){\n    this.recipeService.addIngredientsToShoppingList(this.recipe.ingredients);\n  }\n\n  onEditRecipe(){\n    this.router.navigate(['edit'], {relativeTo: this.route});\n    // this.router.navigate(['../', this.id, 'edit'], {relativeTo: this.route});\n  }\n\n  onDeleteRecipe() {\n    this.recipeService.deleteRecipe(this.id);\n    this.router.navigate(['/recipes']);\n  }\n}\n",
+            "assetsDirs": [],
+            "styleUrlsData": [
+                {
+                    "data": "",
+                    "styleUrl": "./recipe-detail.component.css"
+                }
+            ],
+            "stylesData": "",
+            "constructorObj": {
+                "name": "constructor",
+                "description": "",
+                "args": [
+                    {
+                        "name": "recipeService",
+                        "type": "RecipeService"
+                    },
+                    {
+                        "name": "route",
+                        "type": "ActivatedRoute"
+                    },
+                    {
+                        "name": "router",
+                        "type": "Router"
+                    }
+                ],
+                "line": 13,
+                "jsdoctags": [
+                    {
+                        "name": "recipeService",
+                        "type": "RecipeService",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    },
+                    {
+                        "name": "route",
+                        "type": "ActivatedRoute",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    },
+                    {
+                        "name": "router",
+                        "type": "Router",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    }
+                ]
+            },
+            "implements": [
+                "OnInit"
+            ],
+            "templateData": "<div class=\"row\">\n  <div class=\"col-xs-12\">\n    <img [src]=\"recipe.imagePath\" alt=\"{{ recipe.name }}\" class=\"img-responsive\" style=\"max-height: 200px\"/>\n  </div>\n</div>\n<div class=\"row\">\n  <div class=\"col-xs-12\">\n    <h1>{{ recipe.name }}</h1>\n  </div>\n</div>\n<div class=\"row\">\n  <div class=\"col-xs-12\">\n    <div class=\"btn-group\" appDropdown>\n      <button type=\"button\" class=\"btn btn-primary dropdown-toggle\">\n        Manage Recipe <span class=\"caret\"></span>\n      </button>\n      <ul class=\"dropdown-menu\">\n        <li><a (click)=\"onAddToShoppingList()\" style=\"cursor: pointer;\">To Shopping List</a></li>\n        <li><a style=\"cursor: pointer;\" (click)=\"onEditRecipe()\">Edit Recipe</a></li>\n        <li><a style=\"cursor: pointer;\" (click)=\"onDeleteRecipe()\">Delete Recipe</a></li>\n      </ul>\n    </div>\n  </div>\n</div>\n<div class=\"row\">\n  <div class=\"col-xs-12\">\n    {{ recipe.description }}\n  </div>\n</div>\n<div class=\"row\">\n  <div class=\"col-xs-12\">\n    <ul class=\"list-group\">\n      <li class=\"list-group-item\" *ngFor=\"let ingredient of recipe.ingredients\">\n        {{ ingredient.name }} - {{ ingredient.amount}}\n      </li>\n    </ul>\n  </div>\n</div>\n"
+        },
+        {
+            "name": "RecipeEditComponent",
+            "id": "component-RecipeEditComponent-27bc1d859b8edbfc44b204d07d77c9e5",
+            "file": "src/app/recipes/recipe-edit/recipe-edit.component.ts",
+            "encapsulation": [],
+            "entryComponents": [],
+            "inputs": [],
+            "outputs": [],
+            "providers": [],
+            "selector": "app-recipe-edit",
+            "styleUrls": [
+                "./recipe-edit.component.css"
+            ],
+            "styles": [],
+            "templateUrl": [
+                "./recipe-edit.component.html"
+            ],
+            "viewProviders": [],
+            "inputsClass": [],
+            "outputsClass": [],
+            "propertiesClass": [
+                {
+                    "name": "editMode",
+                    "defaultValue": "false",
+                    "type": "",
+                    "optional": false,
+                    "description": "",
+                    "line": 13
+                },
+                {
+                    "name": "id",
+                    "type": "number",
+                    "optional": false,
+                    "description": "",
+                    "line": 12
+                },
+                {
+                    "name": "recipeForm",
+                    "type": "FormGroup",
+                    "optional": false,
+                    "description": "",
+                    "line": 14
+                }
+            ],
+            "methodsClass": [
+                {
+                    "name": "initForm",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 65,
+                    "modifierKind": [
+                        112
+                    ]
+                },
+                {
+                    "name": "ngOnInit",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 22
+                },
+                {
+                    "name": "onAddIngredient",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 45
+                },
+                {
+                    "name": "onCancel",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 61
+                },
+                {
+                    "name": "onDeleteIngredient",
+                    "args": [
+                        {
+                            "name": "index",
+                            "type": "number"
+                        }
+                    ],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 57,
+                    "jsdoctags": [
+                        {
+                            "name": "index",
+                            "type": "number",
+                            "tagName": {
+                                "text": "param"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "onSubmit",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 30
+                }
+            ],
+            "hostBindings": [],
+            "hostListeners": [],
+            "description": "",
+            "rawdescription": "",
+            "type": "component",
+            "sourceCode": "import { Component, OnInit } from '@angular/core';\nimport { ActivatedRoute, Params, Router } from '@angular/router';\nimport { FormGroup, FormControl, FormArray, Validators } from '@angular/forms';\nimport { RecipeService } from '../recipe.service';\n\n@Component({\n  selector: 'app-recipe-edit',\n  templateUrl: './recipe-edit.component.html',\n  styleUrls: ['./recipe-edit.component.css'],\n})\nexport class RecipeEditComponent implements OnInit {\n  id: number;\n  editMode = false;\n  recipeForm: FormGroup;\n\n  constructor(\n    private route: ActivatedRoute,\n    private recipeService: RecipeService,\n    private router: Router\n  ) {}\n\n  ngOnInit(): void {\n    this.route.params.subscribe((params: Params) => {\n      this.id = +params['id'];\n      this.editMode = params['id'] != null;\n      this.initForm();\n    });\n  }\n\n  onSubmit() {\n    // const newRecipe = new Recipe(\n    //   this.recipeForm.value['name'],\n    //   this.recipeForm.value['description'],\n    //   this.recipeForm.value['imagePath'],\n    //   this.recipeForm.value['ingredients']\n    // );\n    if (this.editMode) {\n      this.recipeService.updateRecipe(this.id, this.recipeForm.value);\n    } else {\n      this.recipeService.addRecipe(this.recipeForm.value);\n    }\n    this.onCancel();\n  }\n\n  onAddIngredient() {\n    (<FormArray>this.recipeForm.get('ingredients')).push(\n      new FormGroup({\n        name: new FormControl(null, Validators.required),\n        amount: new FormControl(null, [\n          Validators.required,\n          Validators.pattern(/^[1-9]+[0-9]*$/),\n        ]),\n      })\n    );\n  }\n\n  onDeleteIngredient(index: number) {\n    (<FormArray>this.recipeForm.get('ingredients')).removeAt(index);\n  }\n\n  onCancel() {\n    this.router.navigate(['../'], {relativeTo: this.route});\n  }\n\n  private initForm() {\n    let recipeName = '';\n    let recipeImagePath = '';\n    let recipeDescription = '';\n    let recipeIngredients = new FormArray([]);\n\n    if (this.editMode) {\n      const recipe = this.recipeService.getRecipe(this.id);\n      recipeName = recipe.name;\n      recipeImagePath = recipe.imagePath;\n      recipeDescription = recipe.description;\n      if (recipe['ingredients']) {\n        for (let ingredient of recipe.ingredients) {\n          recipeIngredients.push(\n            new FormGroup({\n              name: new FormControl(ingredient.name, Validators.required),\n              amount: new FormControl(ingredient.amount, [\n                Validators.required,\n                Validators.pattern(/^[1-9]+[0-9]*$/),\n              ]),\n            })\n          );\n        }\n      }\n    }\n\n    this.recipeForm = new FormGroup({\n      name: new FormControl(recipeName, Validators.required),\n      imagePath: new FormControl(recipeImagePath, Validators.required),\n      description: new FormControl(recipeDescription, Validators.required),\n      ingredients: recipeIngredients,\n    });\n  }\n\n  get controls() {\n    return (<FormArray>this.recipeForm.get('ingredients')).controls;\n  }\n}\n",
+            "assetsDirs": [],
+            "styleUrlsData": [
+                {
+                    "data": "input.ng-invalid.ng-touched, \ntextarea.ng-invalid.ng-touched {\n  border: 1px solid red\n}",
+                    "styleUrl": "./recipe-edit.component.css"
+                }
+            ],
+            "stylesData": "",
+            "constructorObj": {
+                "name": "constructor",
+                "description": "",
+                "args": [
+                    {
+                        "name": "route",
+                        "type": "ActivatedRoute"
+                    },
+                    {
+                        "name": "recipeService",
+                        "type": "RecipeService"
+                    },
+                    {
+                        "name": "router",
+                        "type": "Router"
+                    }
+                ],
+                "line": 14,
+                "jsdoctags": [
+                    {
+                        "name": "route",
+                        "type": "ActivatedRoute",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    },
+                    {
+                        "name": "recipeService",
+                        "type": "RecipeService",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    },
+                    {
+                        "name": "router",
+                        "type": "Router",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    }
+                ]
+            },
+            "implements": [
+                "OnInit"
+            ],
+            "accessors": {
+                "controls": {
+                    "name": "controls",
+                    "getSignature": {
+                        "name": "controls",
+                        "type": "",
+                        "returnType": "",
+                        "line": 99
+                    }
+                }
+            },
+            "templateData": "<div class=\"row\">\n  <div class=\"col-xs-12\">\n    <form [formGroup]=\"recipeForm\" (ngSubmit)=\"onSubmit()\">\n      <div class=\"row\">\n        <div class=\"col-xs-12\">\n          <button type=\"submit\" class=\"btn btn-success\" [disabled]=\"!recipeForm.valid\">Save</button>\n          <button type=\"button\" class=\"btn btn-danger\" (click)=\"onCancel()\">Cancel</button>\n        </div>\n      </div>\n      <div class=\"row\">\n        <div class=\"col-xs-12\">\n          <div class=\"form-group\">\n            <label for=\"name\">Name</label>\n            <input\n              type=\"text\"\n              id=\"name\"\n              formControlName=\"name\"\n              class=\"form-control\"\n            />\n          </div>\n        </div>\n      </div>\n      <div class=\"row\">\n        <div class=\"col-xs-12\">\n          <div class=\"form-group\">\n            <label for=\"imagePath\">Image URL</label>\n            <input\n              type=\"text\"\n              id=\"imagePath\"\n              formControlName=\"imagePath\"\n              class=\"form-control\"\n              formControlName=\"imagePath\"\n              #imagePath\n            />\n          </div>\n        </div>\n      </div>\n      <div class=\"row\">\n        <div class=\"col-xs-12\">\n          <img [src]=\"imagePath.value\" class=\"image-responsiive\" />\n        </div>\n      </div>\n      <div class=\"row\">\n        <div class=\"col-xs-12\">\n          <div class=\"form-group\">\n            <label for=\"description\">Description</label>\n            <textarea\n              type=\"text\"\n              id=\"description\"\n              class=\"form-control\"\n              formControlName=\"description\"\n              rows=\"6\"\n            ></textarea>\n          </div>\n        </div>\n      </div>\n      <div class=\"row\">\n        <div class=\"col-xs-12\" formArrayName=\"ingredients\">\n          <div\n            class=\"row\"\n            *ngFor=\"let ingredientCtrl of controls; let i = index\"\n            [formGroupName]=\"i\"\n            style=\"margin-top: 10px;\"\n          >\n            <div class=\"col-xs-8\">\n              <input type=\"text\" class=\"form-control\" formControlName=\"name\" />\n            </div>\n            <div class=\"col-xs-2\">\n              <input\n                type=\"number\"\n                class=\"form-control\"\n                formControlName=\"amount\"\n              />\n            </div>\n            <div class=\"col-xs-2\">\n              <button type=\"button\" class=\"btn btn-danger\" (click)=\"onDeleteIngredient(i)\">X</button>\n            </div>\n          </div>\n          <hr>\n          <div class=\"row\">\n            <div class=\"col-xs-12\">\n              <button type=\"button\" class=\"btn btn-success\" (click)='onAddIngredient()'>Add Ingredient</button>\n            </div>\n          </div>\n        </div>\n      </div>\n    </form>\n  </div>\n</div>\n"
+        },
+        {
+            "name": "RecipeItemComponent",
+            "id": "component-RecipeItemComponent-b8ee40d068113f8dea1f3888e85c3c4e",
+            "file": "src/app/recipes/recipe-list/recipe-item/recipe-item.component.ts",
+            "encapsulation": [],
+            "entryComponents": [],
+            "inputs": [],
+            "outputs": [],
+            "providers": [],
+            "selector": "app-recipe-item",
+            "styleUrls": [
+                "./recipe-item.component.css"
+            ],
+            "styles": [],
+            "templateUrl": [
+                "./recipe-item.component.html"
+            ],
+            "viewProviders": [],
+            "inputsClass": [
+                {
+                    "name": "index",
+                    "line": 11,
+                    "type": "number"
+                },
+                {
+                    "name": "recipe",
+                    "line": 10,
+                    "type": "Recipe"
+                }
+            ],
+            "outputsClass": [],
+            "propertiesClass": [],
+            "methodsClass": [
+                {
+                    "name": "ngOnInit",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 13
+                }
+            ],
+            "hostBindings": [],
+            "hostListeners": [],
+            "description": "",
+            "rawdescription": "",
+            "type": "component",
+            "sourceCode": "import { Component, OnInit, Input } from '@angular/core';\nimport { Recipe } from '../../recipe.model';\n\n@Component({\n  selector: 'app-recipe-item',\n  templateUrl: './recipe-item.component.html',\n  styleUrls: ['./recipe-item.component.css']\n})\nexport class RecipeItemComponent implements OnInit {\n  @Input() recipe: Recipe;\n  @Input() index: number;\n\n  ngOnInit(): void {\n  }\n}\n",
+            "assetsDirs": [],
+            "styleUrlsData": [
+                {
+                    "data": "",
+                    "styleUrl": "./recipe-item.component.css"
+                }
+            ],
+            "stylesData": "",
+            "implements": [
+                "OnInit"
+            ],
+            "templateData": "<a style=\"cursor: pointer;\" [routerLink]=\"[index]\" routerLinkActive=\"active\" class=\"list-group-item clearfix\">\n  <div class=\"pull-left\">\n    <h4 class=\"list-group-item-heading\">{{ recipe.name }}</h4>\n    <p class=\"list-group-item-text\">{{ recipe.description }}</p>\n  </div>\n  <span class=\"pull-right\">\n    <img\n      [src]=\"recipe.imagePath\"\n      alt=\"{{ recipe.name }}\"\n      class=\"img-responsive\"\n      style=\"max-height: 50px;\"\n    />\n  </span>\n</a>\n"
+        },
+        {
+            "name": "RecipeListComponent",
+            "id": "component-RecipeListComponent-a4130a7c5a14a21ada0e7e7044ff3fab",
+            "file": "src/app/recipes/recipe-list/recipe-list.component.ts",
+            "encapsulation": [],
+            "entryComponents": [],
+            "inputs": [],
+            "outputs": [],
+            "providers": [],
+            "selector": "app-recipe-list",
+            "styleUrls": [
+                "./recipe-list.component.css"
+            ],
+            "styles": [],
+            "templateUrl": [
+                "./recipe-list.component.html"
+            ],
+            "viewProviders": [],
+            "inputsClass": [],
+            "outputsClass": [],
+            "propertiesClass": [
+                {
+                    "name": "recipes",
+                    "type": "Recipe[]",
+                    "optional": false,
+                    "description": "",
+                    "line": 14
+                },
+                {
+                    "name": "subscription",
+                    "type": "Subscription",
+                    "optional": false,
+                    "description": "",
+                    "line": 15
+                }
+            ],
+            "methodsClass": [
+                {
+                    "name": "ngOnDestroy",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 32
+                },
+                {
+                    "name": "ngOnInit",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 19
+                },
+                {
+                    "name": "onNewRecipe",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 28
+                }
+            ],
+            "hostBindings": [],
+            "hostListeners": [],
+            "description": "",
+            "rawdescription": "",
+            "type": "component",
+            "sourceCode": "import { Component, OnInit, OnDestroy } from '@angular/core';\nimport { Router, ActivatedRoute } from '@angular/router';\n\nimport { Recipe } from '../recipe.model';\nimport { RecipeService } from '../recipe.service';\nimport { Subscription } from 'rxjs';\n\n@Component({\n  selector: 'app-recipe-list',\n  templateUrl: './recipe-list.component.html',\n  styleUrls: ['./recipe-list.component.css']\n})\nexport class RecipeListComponent implements OnInit, OnDestroy {\n  recipes: Recipe[];\n  subscription: Subscription;\n\n  constructor(private recipeService: RecipeService, private router: Router, private route: ActivatedRoute) { }\n\n  ngOnInit(): void {\n    this.subscription = this.recipeService.recipesChanged.subscribe(\n      (recipes: Recipe[]) => {\n        this.recipes = recipes;\n      }\n    );\n    this.recipes = this.recipeService.getRecipes();\n  }\n\n  onNewRecipe(){\n    this.router.navigate(['new'], {relativeTo: this.route});\n  }\n\n  ngOnDestroy() {\n    this.subscription.unsubscribe();\n  }\n}\n",
+            "assetsDirs": [],
+            "styleUrlsData": [
+                {
+                    "data": "",
+                    "styleUrl": "./recipe-list.component.css"
+                }
+            ],
+            "stylesData": "",
+            "constructorObj": {
+                "name": "constructor",
+                "description": "",
+                "args": [
+                    {
+                        "name": "recipeService",
+                        "type": "RecipeService"
+                    },
+                    {
+                        "name": "router",
+                        "type": "Router"
+                    },
+                    {
+                        "name": "route",
+                        "type": "ActivatedRoute"
+                    }
+                ],
+                "line": 15,
+                "jsdoctags": [
+                    {
+                        "name": "recipeService",
+                        "type": "RecipeService",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    },
+                    {
+                        "name": "router",
+                        "type": "Router",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    },
+                    {
+                        "name": "route",
+                        "type": "ActivatedRoute",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    }
+                ]
+            },
+            "implements": [
+                "OnInit",
+                "OnDestroy"
+            ],
+            "templateData": "<div class=\"row\">\n  <div class=\"col-xs-12\">\n    <button class=\"btn btn-success\" (click)=\"onNewRecipe()\">New Recipe</button>\n  </div>\n</div>\n<hr />\n<div class=\"row\">\n  <div class=\"col-xs-12\">\n    <app-recipe-item\n      *ngFor=\"let recipeEl of recipes; let i = index\"\n      [recipe]=\"recipeEl\"\n      [index]=\"i\"\n    ></app-recipe-item>\n  </div>\n</div>\n"
+        },
+        {
+            "name": "RecipesComponent",
+            "id": "component-RecipesComponent-d82a10d59eeacaf9462894a352d11384",
+            "file": "src/app/recipes/recipes.component.ts",
+            "encapsulation": [],
+            "entryComponents": [],
+            "inputs": [],
+            "outputs": [],
+            "providers": [],
+            "selector": "app-recipes",
+            "styleUrls": [
+                "./recipes.component.css"
+            ],
+            "styles": [],
+            "templateUrl": [
+                "./recipes.component.html"
+            ],
+            "viewProviders": [],
+            "inputsClass": [],
+            "outputsClass": [],
+            "propertiesClass": [],
+            "methodsClass": [
+                {
+                    "name": "ngOnInit",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 12
+                }
+            ],
+            "hostBindings": [],
+            "hostListeners": [],
+            "description": "",
+            "rawdescription": "",
+            "type": "component",
+            "sourceCode": "import { Component, OnInit } from '@angular/core';\nimport { RecipeService } from './recipe.service'; \n\n@Component({\n  selector: 'app-recipes',\n  templateUrl: './recipes.component.html',\n  styleUrls: ['./recipes.component.css']\n})\nexport class RecipesComponent implements OnInit {\n  constructor() { }\n\n  ngOnInit(): void {\n  }\n}\n",
+            "assetsDirs": [],
+            "styleUrlsData": [
+                {
+                    "data": "",
+                    "styleUrl": "./recipes.component.css"
+                }
+            ],
+            "stylesData": "",
+            "constructorObj": {
+                "name": "constructor",
+                "description": "",
+                "args": [],
+                "line": 9
+            },
+            "implements": [
+                "OnInit"
+            ],
+            "templateData": "<div class=\"row\">\n  <div class=\"col-md-5\">\n    <app-recipe-list></app-recipe-list>\n  </div>\n  <div class=\"col-md-7\">\n   <router-outlet></router-outlet>\n  </div>\n</div>\n"
+        },
+        {
+            "name": "RecipeStartComponent",
+            "id": "component-RecipeStartComponent-fcd17f8a817d815d1892fc3aab3013a5",
+            "file": "src/app/recipes/recipe-start/recipe-start.component.ts",
+            "encapsulation": [],
+            "entryComponents": [],
+            "inputs": [],
+            "outputs": [],
+            "providers": [],
+            "selector": "app-recipe-start",
+            "styleUrls": [
+                "./recipe-start.component.css"
+            ],
+            "styles": [],
+            "templateUrl": [
+                "./recipe-start.component.html"
+            ],
+            "viewProviders": [],
+            "inputsClass": [],
+            "outputsClass": [],
+            "propertiesClass": [],
+            "methodsClass": [
+                {
+                    "name": "ngOnInit",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 12
+                }
+            ],
+            "hostBindings": [],
+            "hostListeners": [],
+            "description": "",
+            "rawdescription": "",
+            "type": "component",
+            "sourceCode": "import { Component, OnInit } from '@angular/core';\n\n@Component({\n  selector: 'app-recipe-start',\n  templateUrl: './recipe-start.component.html',\n  styleUrls: ['./recipe-start.component.css']\n})\nexport class RecipeStartComponent implements OnInit {\n\n  constructor() { }\n\n  ngOnInit(): void {\n  }\n\n}\n",
+            "assetsDirs": [],
+            "styleUrlsData": [
+                {
+                    "data": "",
+                    "styleUrl": "./recipe-start.component.css"
+                }
+            ],
+            "stylesData": "",
+            "constructorObj": {
+                "name": "constructor",
+                "description": "",
+                "args": [],
+                "line": 8
+            },
+            "implements": [
+                "OnInit"
+            ],
+            "templateData": "<h3>Please select a Recipe!</h3>"
+        },
+        {
+            "name": "ShoppingEditComponent",
+            "id": "component-ShoppingEditComponent-d2af89b53728345eeeb010209729ceed",
+            "file": "src/app/shopping-list/shopping-edit/shopping-edit.component.ts",
+            "encapsulation": [],
+            "entryComponents": [],
+            "inputs": [],
+            "outputs": [],
+            "providers": [],
+            "selector": "app-shopping-edit",
+            "styleUrls": [
+                "./shopping-edit.component.css"
+            ],
+            "styles": [],
+            "templateUrl": [
+                "./shopping-edit.component.html"
+            ],
+            "viewProviders": [],
+            "inputsClass": [],
+            "outputsClass": [],
+            "propertiesClass": [
+                {
+                    "name": "editedItem",
+                    "type": "Ingredient",
+                    "optional": false,
+                    "description": "",
+                    "line": 19
+                },
+                {
+                    "name": "editedItemIndex",
+                    "type": "number",
+                    "optional": false,
+                    "description": "",
+                    "line": 18
+                },
+                {
+                    "name": "editMode",
+                    "defaultValue": "false",
+                    "type": "",
+                    "optional": false,
+                    "description": "",
+                    "line": 17
+                },
+                {
+                    "name": "slForm",
+                    "type": "NgForm",
+                    "optional": false,
+                    "description": "",
+                    "line": 15,
+                    "decorators": [
+                        {
+                            "name": "ViewChild",
+                            "stringifiedArguments": "'f', {static: false}"
+                        }
+                    ]
+                },
+                {
+                    "name": "subscription",
+                    "type": "Subscription",
+                    "optional": false,
+                    "description": "",
+                    "line": 16
+                }
+            ],
+            "methodsClass": [
+                {
+                    "name": "ngOnDestroy",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 59
+                },
+                {
+                    "name": "ngOnInit",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 23
+                },
+                {
+                    "name": "onClear",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 49
+                },
+                {
+                    "name": "onDelete",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 54
+                },
+                {
+                    "name": "onSubmit",
+                    "args": [
+                        {
+                            "name": "form",
+                            "type": "NgForm"
+                        }
+                    ],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 37,
+                    "jsdoctags": [
+                        {
+                            "name": "form",
+                            "type": "NgForm",
+                            "tagName": {
+                                "text": "param"
+                            }
+                        }
+                    ]
+                }
+            ],
+            "hostBindings": [],
+            "hostListeners": [],
+            "description": "",
+            "rawdescription": "",
+            "type": "component",
+            "sourceCode": "import { Component, OnInit, OnDestroy, ViewChild} from '@angular/core';\nimport { NgForm } from '@angular/forms';\nimport { Subscription } from 'rxjs';\n\nimport { Ingredient } from 'src/app/shared/ingredient.model';\nimport { ShoppingListService } from '../shoppinglist.service';\n\n\n@Component({\n  selector: 'app-shopping-edit',\n  templateUrl: './shopping-edit.component.html',\n  styleUrls: ['./shopping-edit.component.css']\n})\nexport class ShoppingEditComponent implements OnInit, OnDestroy {\n  @ViewChild('f', {static: false}) slForm: NgForm;\n  subscription: Subscription;\n  editMode = false;\n  editedItemIndex : number;\n  editedItem: Ingredient;\n\n  constructor(private slService: ShoppingListService) { }\n\n  ngOnInit(): void {\n    this.subscription = this.slService.startedEditing.subscribe(\n      (index: number) => {\n        this.editedItemIndex = index;\n        this.editMode = true;\n        this.editedItem = this.slService.getIngredient(index);\n        this.slForm.setValue({\n          name: this.editedItem.name,\n          amount: this.editedItem.amount\n        })\n      }\n    );\n  }\n\n  onSubmit(form: NgForm) {\n    const value = form.value;\n    const newIngredient = new Ingredient(value.name, value.amount);\n    if(this.editMode) {\n      this.slService.updateIngredient(this.editedItemIndex, newIngredient);\n    } else {\n      this.slService.addIngredient(newIngredient);\n    }\n    this.editMode = false;\n    form.reset();\n  }\n\n  onClear() {\n    this.slForm.reset();\n    this.editMode = false;\n  }\n\n  onDelete(){\n    this.slService.deleteIngredient(this.editedItemIndex);\n    this.onClear();\n  }\n\n  ngOnDestroy() {\n    this.subscription.unsubscribe();\n  }\n\n}\n",
+            "assetsDirs": [],
+            "styleUrlsData": [
+                {
+                    "data": "",
+                    "styleUrl": "./shopping-edit.component.css"
+                }
+            ],
+            "stylesData": "",
+            "constructorObj": {
+                "name": "constructor",
+                "description": "",
+                "args": [
+                    {
+                        "name": "slService",
+                        "type": "ShoppingListService"
+                    }
+                ],
+                "line": 19,
+                "jsdoctags": [
+                    {
+                        "name": "slService",
+                        "type": "ShoppingListService",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    }
+                ]
+            },
+            "implements": [
+                "OnInit",
+                "OnDestroy"
+            ],
+            "templateData": "<div class=\"row\">\n  <div class=\"col-xs-12\">\n    <form (ngSubmit)=\"onSubmit(f)\" #f=\"ngForm\">\n      <div class=\"row\">\n        <div class=\"col-sm-5 form-group\">\n          <label for=\"name\">Name</label>\n          <input\n            type=\"text\"\n            id=\"name\"\n            class=\"form-control\"\n            name=\"name\"\n            ngModel\n            required\n          />\n        </div>\n        <div class=\"col-sm-2 form-group\">\n          <label for=\"amount\">Amount</label>\n          <input\n            type=\"number\"\n            id=\"amount\"\n            class=\"form-control\"\n            name=\"amount\"\n            ngModel\n            required\n            pattern=\"^[1-9]+[0-9]*$\"\n          />\n        </div>\n      </div>\n      <div class=\"row\">\n        <div class=\"col-xs-12\">\n          <button class=\"btn btn-success\" type=\"submit\" [disabled]=\"!f.valid\">{{ editMode ? 'Update' : 'Add' }}</button>\n          <button class=\"btn btn-danger\" type=\"button\" (click)=\"onDelete()\" *ngIf=\"editMode\">Delete</button>\n          <button class=\"btn btn-primary\" type=\"button\" (click)=\"onClear()\">Clear</button>\n        </div>\n      </div>\n    </form>\n  </div>\n</div>\n"
+        },
+        {
+            "name": "ShoppingListComponent",
+            "id": "component-ShoppingListComponent-21e89605ee3d1c544fe887c2444d140e",
+            "file": "src/app/shopping-list/shopping-list.component.ts",
+            "encapsulation": [],
+            "entryComponents": [],
+            "inputs": [],
+            "outputs": [],
+            "providers": [],
+            "selector": "app-shopping-list",
+            "styleUrls": [
+                "./shopping-list.component.css"
+            ],
+            "styles": [],
+            "templateUrl": [
+                "./shopping-list.component.html"
+            ],
+            "viewProviders": [],
+            "inputsClass": [],
+            "outputsClass": [],
+            "propertiesClass": [
+                {
+                    "name": "ingredients",
+                    "type": "Ingredient[]",
+                    "optional": false,
+                    "description": "",
+                    "line": 12
+                },
+                {
+                    "name": "subscription",
+                    "type": "Subscription",
+                    "optional": false,
+                    "description": "",
+                    "line": 13,
+                    "modifierKind": [
+                        112
+                    ]
+                }
+            ],
+            "methodsClass": [
+                {
+                    "name": "ngOnDestroy",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 28
+                },
+                {
+                    "name": "ngOnInit",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 17
+                },
+                {
+                    "name": "onEditItem",
+                    "args": [
+                        {
+                            "name": "index",
+                            "type": "number"
+                        }
+                    ],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 24,
+                    "jsdoctags": [
+                        {
+                            "name": "index",
+                            "type": "number",
+                            "tagName": {
+                                "text": "param"
+                            }
+                        }
+                    ]
+                }
+            ],
+            "hostBindings": [],
+            "hostListeners": [],
+            "description": "",
+            "rawdescription": "",
+            "type": "component",
+            "sourceCode": "import { Component, OnInit, OnDestroy } from '@angular/core';\nimport { Ingredient } from '../shared/ingredient.model';\nimport { ShoppingListService } from './shoppinglist.service';\nimport { Subscription } from 'rxjs';\n\n@Component({\n  selector: 'app-shopping-list',\n  templateUrl: './shopping-list.component.html',\n  styleUrls: ['./shopping-list.component.css']\n})\nexport class ShoppingListComponent implements OnInit, OnDestroy {\n  ingredients: Ingredient[];\n  private subscription: Subscription;\n\n  constructor(private slService: ShoppingListService) { }\n\n  ngOnInit(): void {\n    this.ingredients = this.slService.getIngredients();\n    this.subscription = this.slService.ingredientsChanged.subscribe((ingredients: Ingredient[]) => {\n      this.ingredients = ingredients;\n    });\n  }\n\n  onEditItem(index: number) {\n    this.slService.startedEditing.next(index);\n  }\n\n  ngOnDestroy() {\n    this.subscription.unsubscribe();\n  }\n}\n",
+            "assetsDirs": [],
+            "styleUrlsData": [
+                {
+                    "data": "",
+                    "styleUrl": "./shopping-list.component.css"
+                }
+            ],
+            "stylesData": "",
+            "constructorObj": {
+                "name": "constructor",
+                "description": "",
+                "args": [
+                    {
+                        "name": "slService",
+                        "type": "ShoppingListService"
+                    }
+                ],
+                "line": 13,
+                "jsdoctags": [
+                    {
+                        "name": "slService",
+                        "type": "ShoppingListService",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    }
+                ]
+            },
+            "implements": [
+                "OnInit",
+                "OnDestroy"
+            ],
+            "templateData": "<div class=\"row\">\n  <div class=\"col-xs-10\">\n    <app-shopping-edit></app-shopping-edit>\n    <hr />\n    <ul class=\"list-group\">\n      <a \n      class=\"list-group-item\" \n      style=\"cursor: pointer;\"\n      *ngFor=\"let ingredient of ingredients; let i = index\"\n      (click)=\"onEditItem(i)\"\n      >\n      {{ ingredient.name }} ({{ ingredient.amount }})\n      </a>\n    </ul>\n  </div>\n</div>\n"
+        }
+    ],
+    "modules": [
+        {
+            "name": "AppModule",
+            "children": [
+                {
+                    "type": "providers",
+                    "elements": [
+                        {
+                            "name": "AuthInterceptorService"
+                        },
+                        {
+                            "name": "RecipeService"
+                        }
+                    ]
+                },
+                {
+                    "type": "declarations",
+                    "elements": [
+                        {
+                            "name": "AlertComponent"
+                        },
+                        {
+                            "name": "AppComponent"
+                        },
+                        {
+                            "name": "AuthComponent"
+                        },
+                        {
+                            "name": "DropdownDirective"
+                        },
+                        {
+                            "name": "LoadingSpinnerComponent"
+                        },
+                        {
+                            "name": "RecipeDetailComponent"
+                        },
+                        {
+                            "name": "RecipeEditComponent"
+                        },
+                        {
+                            "name": "RecipeItemComponent"
+                        },
+                        {
+                            "name": "RecipeListComponent"
+                        },
+                        {
+                            "name": "RecipeStartComponent"
+                        },
+                        {
+                            "name": "RecipesComponent"
+                        },
+                        {
+                            "name": "ShoppingEditComponent"
+                        },
+                        {
+                            "name": "ShoppingListComponent"
+                        }
+                    ]
+                },
+                {
+                    "type": "imports",
+                    "elements": [
+                        {
+                            "name": "AppRoutingModule"
+                        }
+                    ]
+                },
+                {
+                    "type": "exports",
+                    "elements": []
+                },
+                {
+                    "type": "bootstrap",
+                    "elements": [
+                        {
+                            "name": "AppComponent"
+                        }
+                    ]
+                },
+                {
+                    "type": "classes",
+                    "elements": []
+                }
+            ]
+        },
+        {
+            "name": "AppRoutingModule",
+            "children": [
+                {
+                    "type": "providers",
+                    "elements": []
+                },
+                {
+                    "type": "declarations",
+                    "elements": []
+                },
+                {
+                    "type": "imports",
+                    "elements": []
+                },
+                {
+                    "type": "exports",
+                    "elements": []
+                },
+                {
+                    "type": "bootstrap",
+                    "elements": []
+                },
+                {
+                    "type": "classes",
+                    "elements": []
+                }
+            ]
+        }
+    ],
+    "miscellaneous": {
+        "variables": [
+            {
+                "name": "context",
+                "ctype": "miscellaneous",
+                "subtype": "variable",
+                "file": "src/test.ts",
+                "type": "",
+                "defaultValue": "require.context('./', true, /\\.spec\\.ts$/)"
+            },
+            {
+                "name": "environment",
+                "ctype": "miscellaneous",
+                "subtype": "variable",
+                "file": "src/environments/environment.ts",
+                "type": "object",
+                "defaultValue": "{\n  production: false\n}"
+            },
+            {
+                "name": "environment",
+                "ctype": "miscellaneous",
+                "subtype": "variable",
+                "file": "src/environments/environment.prod.ts",
+                "type": "object",
+                "defaultValue": "{\n  production: true\n}"
+            },
+            {
+                "name": "Large",
+                "ctype": "miscellaneous",
+                "subtype": "variable",
+                "file": "src/stories/Button.stories.ts",
+                "type": "",
+                "defaultValue": "Template.bind({})"
+            },
+            {
+                "name": "LoggedIn",
+                "ctype": "miscellaneous",
+                "subtype": "variable",
+                "file": "src/stories/Header.stories.ts",
+                "type": "",
+                "defaultValue": "Template.bind({})"
+            },
+            {
+                "name": "LoggedIn",
+                "ctype": "miscellaneous",
+                "subtype": "variable",
+                "file": "src/stories/Page.stories.ts",
+                "type": "",
+                "defaultValue": "Template.bind({})"
+            },
+            {
+                "name": "LoggedOut",
+                "ctype": "miscellaneous",
+                "subtype": "variable",
+                "file": "src/stories/Header.stories.ts",
+                "type": "",
+                "defaultValue": "Template.bind({})"
+            },
+            {
+                "name": "LoggedOut",
+                "ctype": "miscellaneous",
+                "subtype": "variable",
+                "file": "src/stories/Page.stories.ts",
+                "type": "",
+                "defaultValue": "Template.bind({})"
+            },
+            {
+                "name": "Primary",
+                "ctype": "miscellaneous",
+                "subtype": "variable",
+                "file": "src/stories/Button.stories.ts",
+                "type": "",
+                "defaultValue": "Template.bind({})"
+            },
+            {
+                "name": "require",
+                "ctype": "miscellaneous",
+                "subtype": "variable",
+                "file": "src/test.ts",
+                "type": "literal type"
+            },
+            {
+                "name": "Secondary",
+                "ctype": "miscellaneous",
+                "subtype": "variable",
+                "file": "src/stories/Button.stories.ts",
+                "type": "",
+                "defaultValue": "Template.bind({})"
+            },
+            {
+                "name": "Small",
+                "ctype": "miscellaneous",
+                "subtype": "variable",
+                "file": "src/stories/Button.stories.ts",
+                "type": "",
+                "defaultValue": "Template.bind({})"
+            },
+            {
+                "name": "Template",
+                "ctype": "miscellaneous",
+                "subtype": "variable",
+                "file": "src/stories/Header.stories.ts",
+                "type": "Story<Header>",
+                "defaultValue": "(args: Header) => ({\n  component: Header,\n  props: args,\n})"
+            },
+            {
+                "name": "Template",
+                "ctype": "miscellaneous",
+                "subtype": "variable",
+                "file": "src/stories/Page.stories.ts",
+                "type": "Story<Page>",
+                "defaultValue": "(args: Page) => ({\n  component: Page,\n  props: args,\n})"
+            },
+            {
+                "name": "Template",
+                "ctype": "miscellaneous",
+                "subtype": "variable",
+                "file": "src/stories/Button.stories.ts",
+                "type": "Story<Button>",
+                "defaultValue": "(args: Button) => ({\n  component: Button,\n  props: args,\n})"
+            }
+        ],
+        "functions": [],
+        "typealiases": [],
+        "enumerations": [],
+        "groupedVariables": {
+            "src/test.ts": [
+                {
+                    "name": "context",
+                    "ctype": "miscellaneous",
+                    "subtype": "variable",
+                    "file": "src/test.ts",
+                    "type": "",
+                    "defaultValue": "require.context('./', true, /\\.spec\\.ts$/)"
+                },
+                {
+                    "name": "require",
+                    "ctype": "miscellaneous",
+                    "subtype": "variable",
+                    "file": "src/test.ts",
+                    "type": "literal type"
+                }
+            ],
+            "src/environments/environment.ts": [
+                {
+                    "name": "environment",
+                    "ctype": "miscellaneous",
+                    "subtype": "variable",
+                    "file": "src/environments/environment.ts",
+                    "type": "object",
+                    "defaultValue": "{\n  production: false\n}"
+                }
+            ],
+            "src/environments/environment.prod.ts": [
+                {
+                    "name": "environment",
+                    "ctype": "miscellaneous",
+                    "subtype": "variable",
+                    "file": "src/environments/environment.prod.ts",
+                    "type": "object",
+                    "defaultValue": "{\n  production: true\n}"
+                }
+            ],
+            "src/stories/Button.stories.ts": [
+                {
+                    "name": "Large",
+                    "ctype": "miscellaneous",
+                    "subtype": "variable",
+                    "file": "src/stories/Button.stories.ts",
+                    "type": "",
+                    "defaultValue": "Template.bind({})"
+                },
+                {
+                    "name": "Primary",
+                    "ctype": "miscellaneous",
+                    "subtype": "variable",
+                    "file": "src/stories/Button.stories.ts",
+                    "type": "",
+                    "defaultValue": "Template.bind({})"
+                },
+                {
+                    "name": "Secondary",
+                    "ctype": "miscellaneous",
+                    "subtype": "variable",
+                    "file": "src/stories/Button.stories.ts",
+                    "type": "",
+                    "defaultValue": "Template.bind({})"
+                },
+                {
+                    "name": "Small",
+                    "ctype": "miscellaneous",
+                    "subtype": "variable",
+                    "file": "src/stories/Button.stories.ts",
+                    "type": "",
+                    "defaultValue": "Template.bind({})"
+                },
+                {
+                    "name": "Template",
+                    "ctype": "miscellaneous",
+                    "subtype": "variable",
+                    "file": "src/stories/Button.stories.ts",
+                    "type": "Story<Button>",
+                    "defaultValue": "(args: Button) => ({\n  component: Button,\n  props: args,\n})"
+                }
+            ],
+            "src/stories/Header.stories.ts": [
+                {
+                    "name": "LoggedIn",
+                    "ctype": "miscellaneous",
+                    "subtype": "variable",
+                    "file": "src/stories/Header.stories.ts",
+                    "type": "",
+                    "defaultValue": "Template.bind({})"
+                },
+                {
+                    "name": "LoggedOut",
+                    "ctype": "miscellaneous",
+                    "subtype": "variable",
+                    "file": "src/stories/Header.stories.ts",
+                    "type": "",
+                    "defaultValue": "Template.bind({})"
+                },
+                {
+                    "name": "Template",
+                    "ctype": "miscellaneous",
+                    "subtype": "variable",
+                    "file": "src/stories/Header.stories.ts",
+                    "type": "Story<Header>",
+                    "defaultValue": "(args: Header) => ({\n  component: Header,\n  props: args,\n})"
+                }
+            ],
+            "src/stories/Page.stories.ts": [
+                {
+                    "name": "LoggedIn",
+                    "ctype": "miscellaneous",
+                    "subtype": "variable",
+                    "file": "src/stories/Page.stories.ts",
+                    "type": "",
+                    "defaultValue": "Template.bind({})"
+                },
+                {
+                    "name": "LoggedOut",
+                    "ctype": "miscellaneous",
+                    "subtype": "variable",
+                    "file": "src/stories/Page.stories.ts",
+                    "type": "",
+                    "defaultValue": "Template.bind({})"
+                },
+                {
+                    "name": "Template",
+                    "ctype": "miscellaneous",
+                    "subtype": "variable",
+                    "file": "src/stories/Page.stories.ts",
+                    "type": "Story<Page>",
+                    "defaultValue": "(args: Page) => ({\n  component: Page,\n  props: args,\n})"
+                }
+            ]
+        },
+        "groupedFunctions": {},
+        "groupedEnumerations": {},
+        "groupedTypeAliases": {}
+    },
+    "routes": {
+        "name": "<root>",
+        "kind": "module",
+        "className": "AppModule",
+        "children": [
+            {
+                "name": "appRoutes",
+                "filename": "src/app/app-routing.module.ts",
+                "module": "AppRoutingModule",
+                "children": [
+                    {
+                        "path": "",
+                        "redirectTo": "/recipes",
+                        "pathMatch": "full"
+                    },
+                    {
+                        "path": "recipes",
+                        "component": "RecipesComponent",
+                        "canActivate": [
+                            "AuthGuard"
+                        ],
+                        "children": [
+                            {
+                                "path": "",
+                                "component": "RecipeStartComponent"
+                            },
+                            {
+                                "path": "new",
+                                "component": "RecipeEditComponent"
+                            },
+                            {
+                                "path": ":id",
+                                "component": "RecipeDetailComponent",
+                                "resolve": [
+                                    "RecipeResolverService"
+                                ]
+                            },
+                            {
+                                "path": ":id/edit",
+                                "component": "RecipeEditComponent",
+                                "resolve": [
+                                    "RecipeResolverService"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "path": "shopping-list",
+                        "component": "ShoppingListComponent"
+                    },
+                    {
+                        "path": "auth",
+                        "component": "AuthComponent"
+                    }
+                ],
+                "kind": "module"
+            }
+        ]
+    },
+    "coverage": {
+        "count": 1,
+        "status": "low",
+        "files": [
+            {
+                "filePath": "e2e/src/app.po.ts",
+                "type": "class",
+                "linktype": "classe",
+                "name": "AppPage",
+                "coveragePercent": 0,
+                "coverageCount": "0/3",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/app.component.ts",
+                "type": "component",
+                "linktype": "component",
+                "name": "AppComponent",
+                "coveragePercent": 0,
+                "coverageCount": "0/3",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/auth/auth-interceptor.service.ts",
+                "type": "interceptor",
+                "linktype": "interceptor",
+                "name": "AuthInterceptorService",
+                "coveragePercent": 0,
+                "coverageCount": "0/3",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/auth/auth.component.ts",
+                "type": "component",
+                "linktype": "component",
+                "name": "AuthComponent",
+                "coveragePercent": 0,
+                "coverageCount": "0/8",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/auth/auth.guard.ts",
+                "type": "guard",
+                "linktype": "guard",
+                "name": "AuthGuard",
+                "coveragePercent": 0,
+                "coverageCount": "0/3",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/auth/auth.service.ts",
+                "type": "injectable",
+                "linktype": "injectable",
+                "name": "AuthService",
+                "coveragePercent": 0,
+                "coverageCount": "0/11",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/auth/auth.service.ts",
+                "type": "interface",
+                "linktype": "interface",
+                "name": "AuthResponseData",
+                "coveragePercent": 0,
+                "coverageCount": "0/8",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/auth/user.model.ts",
+                "type": "class",
+                "linktype": "classe",
+                "name": "User",
+                "coveragePercent": 0,
+                "coverageCount": "0/4",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/header/header.component.ts",
+                "type": "component",
+                "linktype": "component",
+                "name": "HeaderComponent",
+                "coveragePercent": 0,
+                "coverageCount": "0/9",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/recipes/recipe-detail/recipe-detail.component.ts",
+                "type": "component",
+                "linktype": "component",
+                "name": "RecipeDetailComponent",
+                "coveragePercent": 0,
+                "coverageCount": "0/8",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/recipes/recipe-edit/recipe-edit.component.ts",
+                "type": "component",
+                "linktype": "component",
+                "name": "RecipeEditComponent",
+                "coveragePercent": 0,
+                "coverageCount": "0/11",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/recipes/recipe-list/recipe-item/recipe-item.component.ts",
+                "type": "component",
+                "linktype": "component",
+                "name": "RecipeItemComponent",
+                "coveragePercent": 0,
+                "coverageCount": "0/4",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/recipes/recipe-list/recipe-list.component.ts",
+                "type": "component",
+                "linktype": "component",
+                "name": "RecipeListComponent",
+                "coveragePercent": 0,
+                "coverageCount": "0/7",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/recipes/recipe-start/recipe-start.component.ts",
+                "type": "component",
+                "linktype": "component",
+                "name": "RecipeStartComponent",
+                "coveragePercent": 0,
+                "coverageCount": "0/3",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/recipes/recipe.model.ts",
+                "type": "class",
+                "linktype": "classe",
+                "name": "Recipe",
+                "coveragePercent": 0,
+                "coverageCount": "0/6",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/recipes/recipe.service.ts",
+                "type": "injectable",
+                "linktype": "injectable",
+                "name": "RecipeService",
+                "coveragePercent": 0,
+                "coverageCount": "0/11",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/recipes/recipes-resolver.service.ts",
+                "type": "guard",
+                "linktype": "guard",
+                "name": "RecipeResolverService",
+                "coveragePercent": 0,
+                "coverageCount": "0/3",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/recipes/recipes.component.ts",
+                "type": "component",
+                "linktype": "component",
+                "name": "RecipesComponent",
+                "coveragePercent": 0,
+                "coverageCount": "0/3",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/shared/alert/alert.component.ts",
+                "type": "component",
+                "linktype": "component",
+                "name": "AlertComponent",
+                "coveragePercent": 0,
+                "coverageCount": "0/4",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/shared/data-storage.service.ts",
+                "type": "injectable",
+                "linktype": "injectable",
+                "name": "DataStorageService",
+                "coveragePercent": 0,
+                "coverageCount": "0/4",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/shared/dropdown.directive.ts",
+                "type": "directive",
+                "linktype": "directive",
+                "name": "DropdownDirective",
+                "coveragePercent": 0,
+                "coverageCount": "0/3",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/shared/ingredient.model.ts",
+                "type": "class",
+                "linktype": "classe",
+                "name": "Ingredient",
+                "coveragePercent": 0,
+                "coverageCount": "0/4",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/shared/loading-spinner/loading-spinner.component.ts",
+                "type": "component",
+                "linktype": "component",
+                "name": "LoadingSpinnerComponent",
+                "coveragePercent": 0,
+                "coverageCount": "0/1",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/shopping-list/shopping-edit/shopping-edit.component.ts",
+                "type": "component",
+                "linktype": "component",
+                "name": "ShoppingEditComponent",
+                "coveragePercent": 0,
+                "coverageCount": "0/12",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/shopping-list/shopping-list.component.ts",
+                "type": "component",
+                "linktype": "component",
+                "name": "ShoppingListComponent",
+                "coveragePercent": 0,
+                "coverageCount": "0/7",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/shopping-list/shoppinglist.service.ts",
+                "type": "class",
+                "linktype": "classe",
+                "name": "ShoppingListService",
+                "coveragePercent": 0,
+                "coverageCount": "0/10",
+                "status": "low"
+            },
+            {
+                "filePath": "src/environments/environment.prod.ts",
+                "type": "variable",
+                "linktype": "miscellaneous",
+                "linksubtype": "variable",
+                "name": "environment",
+                "coveragePercent": 0,
+                "coverageCount": "0/1",
+                "status": "low"
+            },
+            {
+                "filePath": "src/environments/environment.ts",
+                "type": "variable",
+                "linktype": "miscellaneous",
+                "linksubtype": "variable",
+                "name": "environment",
+                "coveragePercent": 0,
+                "coverageCount": "0/1",
+                "status": "low"
+            },
+            {
+                "filePath": "src/stories/Button.stories.ts",
+                "type": "variable",
+                "linktype": "miscellaneous",
+                "linksubtype": "variable",
+                "name": "Large",
+                "coveragePercent": 0,
+                "coverageCount": "0/1",
+                "status": "low"
+            },
+            {
+                "filePath": "src/stories/Button.stories.ts",
+                "type": "variable",
+                "linktype": "miscellaneous",
+                "linksubtype": "variable",
+                "name": "Primary",
+                "coveragePercent": 0,
+                "coverageCount": "0/1",
+                "status": "low"
+            },
+            {
+                "filePath": "src/stories/Button.stories.ts",
+                "type": "variable",
+                "linktype": "miscellaneous",
+                "linksubtype": "variable",
+                "name": "Secondary",
+                "coveragePercent": 0,
+                "coverageCount": "0/1",
+                "status": "low"
+            },
+            {
+                "filePath": "src/stories/Button.stories.ts",
+                "type": "variable",
+                "linktype": "miscellaneous",
+                "linksubtype": "variable",
+                "name": "Small",
+                "coveragePercent": 0,
+                "coverageCount": "0/1",
+                "status": "low"
+            },
+            {
+                "filePath": "src/stories/Button.stories.ts",
+                "type": "variable",
+                "linktype": "miscellaneous",
+                "linksubtype": "variable",
+                "name": "Template",
+                "coveragePercent": 0,
+                "coverageCount": "0/1",
+                "status": "low"
+            },
+            {
+                "filePath": "src/stories/Header.stories.ts",
+                "type": "variable",
+                "linktype": "miscellaneous",
+                "linksubtype": "variable",
+                "name": "LoggedIn",
+                "coveragePercent": 0,
+                "coverageCount": "0/1",
+                "status": "low"
+            },
+            {
+                "filePath": "src/stories/Header.stories.ts",
+                "type": "variable",
+                "linktype": "miscellaneous",
+                "linksubtype": "variable",
+                "name": "LoggedOut",
+                "coveragePercent": 0,
+                "coverageCount": "0/1",
+                "status": "low"
+            },
+            {
+                "filePath": "src/stories/Header.stories.ts",
+                "type": "variable",
+                "linktype": "miscellaneous",
+                "linksubtype": "variable",
+                "name": "Template",
+                "coveragePercent": 0,
+                "coverageCount": "0/1",
+                "status": "low"
+            },
+            {
+                "filePath": "src/stories/Page.stories.ts",
+                "type": "variable",
+                "linktype": "miscellaneous",
+                "linksubtype": "variable",
+                "name": "LoggedIn",
+                "coveragePercent": 0,
+                "coverageCount": "0/1",
+                "status": "low"
+            },
+            {
+                "filePath": "src/stories/Page.stories.ts",
+                "type": "variable",
+                "linktype": "miscellaneous",
+                "linksubtype": "variable",
+                "name": "LoggedOut",
+                "coveragePercent": 0,
+                "coverageCount": "0/1",
+                "status": "low"
+            },
+            {
+                "filePath": "src/stories/Page.stories.ts",
+                "type": "variable",
+                "linktype": "miscellaneous",
+                "linksubtype": "variable",
+                "name": "Template",
+                "coveragePercent": 0,
+                "coverageCount": "0/1",
+                "status": "low"
+            },
+            {
+                "filePath": "src/stories/button.component.ts",
+                "type": "component",
+                "linktype": "component",
+                "name": "ButtonComponent",
+                "coveragePercent": 83,
+                "coverageCount": "5/6",
+                "status": "very-good"
+            },
+            {
+                "filePath": "src/stories/header.component.ts",
+                "type": "component",
+                "linktype": "component",
+                "name": "HeaderComponent",
+                "coveragePercent": 0,
+                "coverageCount": "0/5",
+                "status": "low"
+            },
+            {
+                "filePath": "src/stories/page.component.ts",
+                "type": "component",
+                "linktype": "component",
+                "name": "PageComponent",
+                "coveragePercent": 0,
+                "coverageCount": "0/5",
+                "status": "low"
+            },
+            {
+                "filePath": "src/test.ts",
+                "type": "variable",
+                "linktype": "miscellaneous",
+                "linksubtype": "variable",
+                "name": "context",
+                "coveragePercent": 0,
+                "coverageCount": "0/1",
+                "status": "low"
+            },
+            {
+                "filePath": "src/test.ts",
+                "type": "variable",
+                "linktype": "miscellaneous",
+                "linksubtype": "variable",
+                "name": "require",
+                "coveragePercent": 0,
+                "coverageCount": "0/1",
+                "status": "low"
+            }
+        ]
+    }
+}
